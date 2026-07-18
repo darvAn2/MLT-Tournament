@@ -63,7 +63,6 @@ window.MLT_CONFIG = {
     discord: "https://discord.gg/mlt",
     youtube: "https://youtube.com/@mlt",
     twitch: "https://twitch.tv/mlt",
-    vk: "https://vk.com/mlt",
   },
 
   footer: {
