@@ -61,8 +61,8 @@ window.MLT_CONFIG = {
   social: {
     telegram: "https://t.me/mlt_esports",
     discord: "https://discord.gg/mlt",
-    youtube: "https://youtube.com/@mlt",
     twitch: "https://twitch.tv/mlt",
+    vk: "https://vk.com/mlt",
   },
 
   footer: {
