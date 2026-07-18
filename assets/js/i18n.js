@@ -20,6 +20,7 @@ export const I18N = {
     sidePriority: "Приоритет №1",
     eyebrowUpcoming: "Ближайшие матчи", titleMatches: "Матчи", linkMoreMatches: "Все матчи →",
     eyebrowMedia: "Медиа", titleNews: "Последние новости", linkMoreNews: "Все новости →",
+    emptyMatches: "Нет предстоящих матчей",
     emptyUpcoming: "Нет предстоящих матчей", emptyHomeNews: "Нет новостей",
     loadingMatches: "Загрузка матчей...", loadingNews: "Загрузка новостей...",
 
@@ -29,7 +30,8 @@ export const I18N = {
 
     // Рейтинги
     pageRankingsTitle: "Рейтинги", tabTeams: "Команды", tabPlayers: "Игроки",
-    thRank: "#", thTeam: "Команда", thWinrate: "Винрейт", thRating: "Рейтинг", thTrophies: "Трофеи",
+    thRank: "#", thTeam: "Команда", thWinrate: "Винрейт", thRating: "Рейтинг", thTrophies: "Трофеи", thElo: "ELO",
+    stP: "И", stW: "В", stD: "Н", stL: "П", stPts: "О", swissRound: "Раунд",
     thPlayer: "Игрок", thKD: "K/D", thADR: "ADR", thKAST: "KAST",
     loadingTeamsTable: "Загрузка рейтинга команд...", loadingPlayersTable: "Загрузка рейтинга игроков...",
 
@@ -153,6 +155,7 @@ export const I18N = {
     sidePriority: "Priority #1",
     eyebrowUpcoming: "Upcoming matches", titleMatches: "Matches", linkMoreMatches: "All matches →",
     eyebrowMedia: "Media", titleNews: "Latest news", linkMoreNews: "All news →",
+    emptyMatches: "No upcoming matches",
     emptyUpcoming: "No upcoming matches", emptyHomeNews: "No news yet",
     loadingMatches: "Loading matches...", loadingNews: "Loading news...",
 
@@ -160,7 +163,8 @@ export const I18N = {
     emptyLive: "No matches live right now", emptyResults: "No results yet",
 
     pageRankingsTitle: "Rankings", tabTeams: "Teams", tabPlayers: "Players",
-    thRank: "#", thTeam: "Team", thWinrate: "Winrate", thRating: "Rating", thTrophies: "Trophies",
+    thRank: "#", thTeam: "Team", thWinrate: "Winrate", thRating: "Rating", thTrophies: "Trophies", thElo: "ELO",
+    stP: "P", stW: "W", stD: "D", stL: "L", stPts: "Pts", swissRound: "Round",
     thPlayer: "Player", thKD: "K/D", thADR: "ADR", thKAST: "KAST",
     loadingTeamsTable: "Loading team rankings...", loadingPlayersTable: "Loading player rankings...",
 
