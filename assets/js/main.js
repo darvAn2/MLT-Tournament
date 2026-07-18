@@ -221,7 +221,7 @@ function topMatchCardHTML(m){
   const combinedRating = (teamA.rating || 0) + (teamB.rating || 0);
 
   return `
-    <div class="top-match-card" onclick="window.location.href='/match-details.html?id=${m.id}'">
+    <div class="top-match-card" onclick="window.location.href='match-details.html?id=${m.id}'">
       <div class="top-match-teams">
         <span class="top-match-team">${teamA.name}</span>
         <span class="top-match-vs">vs</span>
@@ -292,14 +292,15 @@ onAuthStateChanged(auth, async (user) => {
 
 function updateAuthUI(){
   const btn = document.getElementById("openAuth");
-  if (currentUser && currentUserDoc) {
-    btn.textContent = currentUserDoc.nickname || currentUser.email;
-  } else {
-    btn.textContent = t("btnLogin");
-  }
+  const mobileBtn = document.getElementById("mobileOpenAuth");
+  const label = (currentUser && currentUserDoc) ? (currentUserDoc.nickname || currentUser.email) : t("btnLogin");
+  btn.textContent = label;
+  if (mobileBtn) mobileBtn.textContent = label;
   // Кнопка «Админ-панель» в шапке видна только пользователям с ролью admin
   const adminBtn = document.getElementById("adminPanelBtn");
   if (adminBtn) adminBtn.style.display = isAdmin() ? "" : "none";
+  const mobileAdminBtn = document.getElementById("mobileAdminPanelBtn");
+  if (mobileAdminBtn) mobileAdminBtn.style.display = isAdmin() ? "" : "none";
 }
 
 async function handleRegister(e){
@@ -388,7 +389,7 @@ function openProfileModal(){
     teamBox.innerHTML = `
       <div class="panel-box">
         <h3>${t("myTeamTitle")}</h3>
-        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='/team-profile.html?id=${myTeam.id}'">
+        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='team-profile.html?id=${myTeam.id}'">
           <span class="d-team">${tagBlock(myTeam, 28)}${myTeam.name}</span>
           <span>${t("btnOpenTeam")}</span>
         </div>
@@ -574,7 +575,7 @@ function renderAccountPage(){
         : st === "rejected" ? `<p class="form-note" style="margin-top:10px; color:var(--loss);">${t("accountTeamStatusRejectedNote")}</p>` : "";
       teamBox.innerHTML = `
         <div class="panel-box">
-          <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='/team-profile.html?id=${myTeam.id}'">
+          <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='team-profile.html?id=${myTeam.id}'">
             <span class="d-team">${tagBlock(myTeam, 32)}${myTeam.name} ${statusBadge}</span>
             <span>${t("btnOpenTeam")}</span>
           </div>
@@ -743,7 +744,7 @@ async function submitCreateTeamForm(e){
       if (pendingTournamentId) {
         pendingTournamentId = null;
       }
-      window.location.href = "/account.html";
+      window.location.href="account.html";
     }, 1600);
   } catch (err) {
     note.style.color = "var(--loss)";
@@ -1040,7 +1041,7 @@ function renderRankings(){
     teamsTable.innerHTML = `
       <div class="data-row head" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr;"><span>${t("thRank")}</span><span>${t("thTeam")}</span><span>${t("thWinrate")}</span><span>${t("thElo")}</span><span>${t("thRating")}</span><span>${t("thTrophies")}</span></div>
       ${sortedTeams.map((tm,i) => `
-        <div class="data-row" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr;" onclick="window.location.href='/team-profile.html?id=${tm.id}'">
+        <div class="data-row" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr;" onclick="window.location.href='team-profile.html?id=${tm.id}'">
           <span class="d-rank">${i+1}</span><span class="d-team">${tagBlock(tm, 30)}${tm.name}</span>
           <span>${tm.winrate||0}%</span><span class="mono">${tm.elo||1000}</span><span class="mono">${(tm.rating||0).toFixed(2)}</span><span>${Array.isArray(tm.trophies) ? tm.trophies.length : (tm.trophies||0)}</span>
         </div>
@@ -1054,7 +1055,7 @@ function renderRankings(){
     playersTable.innerHTML = `
       <div class="data-row head"><span>${t("thRank")}</span><span>${t("thPlayer")}</span><span>${t("thKD")}</span><span>${t("thADR")}</span><span>${t("thKAST")}</span><span>${t("thRating")}</span></div>
       ${sortedPlayers.map((p,i) => `
-        <div class="data-row" onclick="window.location.href='/player-profile.html?id=${p.id}'">
+        <div class="data-row" onclick="window.location.href='player-profile.html?id=${p.id}'">
           <span class="d-rank">${i+1}</span><span class="d-team">${p.nick} <span class="d-dim">${teamTag(teamById(p.teamId))}</span></span>
           <span class="mono">${(p.kd||0).toFixed(2)}</span><span class="mono">${(p.adr||0).toFixed(1)}</span><span class="mono">${p.kast||0}%</span><span class="mono">${(p.rating||0).toFixed(2)}</span>
         </div>
@@ -1180,7 +1181,7 @@ function renderMatchDetailsPage(){
   let html = `
     <div class="md-teams-panel">
       <div class="md-teams-grid">
-        <div class="md-team" onclick="window.location.href='/team-profile.html?id=${teamA.id}'">
+        <div class="md-team" onclick="window.location.href='team-profile.html?id=${teamA.id}'">
           ${tagBlock(teamA, 88)}
           <span class="team-name" style="font-size:18px;">${teamA.name}</span>
           ${formPills(teamA.form)}
@@ -1190,7 +1191,7 @@ function renderMatchDetailsPage(){
           ${midValue}
           <span>${dateLabel(m.startAt, false)}</span>
         </div>
-        <div class="md-team" onclick="window.location.href='/team-profile.html?id=${teamB.id}'">
+        <div class="md-team" onclick="window.location.href='team-profile.html?id=${teamB.id}'">
           ${tagBlock(teamB, 88)}
           <span class="team-name" style="font-size:18px;">${teamB.name}</span>
           ${formPills(teamB.form)}
@@ -1207,12 +1208,12 @@ function renderMatchDetailsPage(){
         <div class="md-teams-grid" style="align-items:start;">
           <div>
             <div class="stat-team-label">${teamA.name} — ${t("compositionOf")}</div>
-            <ul class="lineup">${rosterA.map(p => `<li onclick="window.location.href='/player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
+            <ul class="lineup">${rosterA.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
           </div>
           <div></div>
           <div>
             <div class="stat-team-label">${teamB.name} — ${t("compositionOf")}</div>
-            <ul class="lineup">${rosterB.map(p => `<li onclick="window.location.href='/player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
+            <ul class="lineup">${rosterB.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
           </div>
         </div>
       </div>
@@ -1290,7 +1291,7 @@ function renderPlayerProfilePage(){
       <div class="player-avatar" style="${avatarStyle}">${photoUrl ? "" : (p.nick || "?")[0]}</div>
       <div class="profile-info">
         <h1>${p.nick}</h1>
-        ${team ? `<div class="profile-sub" onclick="window.location.href='/team-profile.html?id=${team.id}'">${team.name}</div>` : `<div class="profile-sub" style="cursor:default;">${t("noTeamShort")}</div>`}
+        ${team ? `<div class="profile-sub" onclick="window.location.href='team-profile.html?id=${team.id}'">${team.name}</div>` : `<div class="profile-sub" style="cursor:default;">${t("noTeamShort")}</div>`}
         <div class="achievements">
           ${(p.achievements && p.achievements.length) ? p.achievements.map(a => `<span class="achv">${a}</span>`).join("") : ""}
           ${contactChips.join("")}
@@ -1315,7 +1316,7 @@ function renderPlayerProfilePage(){
               if (!match) return "";
               const opponent = teamById(match.teamA === p.teamId ? match.teamB : match.teamA);
               const result = match.status === "finished" && match.score ? (match.score[0] > match.score[1] ? "W" : "L") : "—";
-              return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='/match-details.html?id=${match.id}'"><span>${opponent ? opponent.name : "—"}</span><span>${result}</span><span>${dateLabel(match.startAt, false)}</span></div>`;
+              return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='match-details.html?id=${match.id}'"><span>${opponent ? opponent.name : "—"}</span><span>${result}</span><span>${dateLabel(match.startAt, false)}</span></div>`;
             }).join("") || `<div class="empty-state" style="padding:24px 0;">${t("noMatches")}</div>`
           : `<div class="empty-state" style="padding:24px 0;">${t("noMatches")}</div>`}
       </div>
@@ -1386,13 +1387,13 @@ function renderTeamProfilePage(){
         ${recentMatches.length ? recentMatches.map(m => {
           const opponent = teamById(m.teamA === team.id ? m.teamB : m.teamA);
           const isWin = m.score && ((m.teamA === team.id && m.score[0] > m.score[1]) || (m.teamB === team.id && m.score[1] > m.score[0]));
-          return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='/match-details.html?id=${m.id}'"><span>${opponent ? opponent.name : "—"}</span><span style="color:${isWin ? "var(--win)" : "var(--loss)"};">${isWin ? "W" : "L"}</span><span>${dateLabel(m.startAt, false)}</span></div>`;
+          return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='match-details.html?id=${m.id}'"><span>${opponent ? opponent.name : "—"}</span><span style="color:${isWin ? "var(--win)" : "var(--loss)"};">${isWin ? "W" : "L"}</span><span>${dateLabel(m.startAt, false)}</span></div>`;
         }).join("") : `<div class="empty-state" style="padding:24px 0;">${t("noMatches")}</div>`}
       </div>
       <div class="panel-box">
         <h3>${t("compositionTitle")}</h3>
         <ul class="lineup">
-          ${roster.length ? roster.map(p => `<li onclick="window.location.href='/player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
+          ${roster.length ? roster.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
         </ul>
         <h3 style="margin-top:20px;">${t("trophiesLabel")}</h3>
         ${Array.isArray(team.trophies) && team.trophies.length
@@ -1483,13 +1484,13 @@ function publicStandingsTableHTML(rows, kind){
     const tm = teamById(row.teamId);
     const name = tm ? tm.name : "?";
     if (kind === "league") {
-      return `<div class="data-row" onclick="window.location.href='/team-profile.html?id=${row.teamId}'">
+      return `<div class="data-row" onclick="window.location.href='team-profile.html?id=${row.teamId}'">
         <span class="d-rank">${i + 1}</span><span class="d-team">${tm ? tagBlock(tm, 24) : ""}${name}</span>
         <span>${row.played}</span><span>${row.wins}</span><span>${row.draws}</span><span>${row.losses}</span>
         <span class="mono">${row.gf - row.ga >= 0 ? "+" : ""}${row.gf - row.ga}</span><span class="mono" style="font-weight:700;">${row.pts}</span>
       </div>`;
     }
-    return `<div class="data-row" onclick="window.location.href='/team-profile.html?id=${row.teamId}'">
+    return `<div class="data-row" onclick="window.location.href='team-profile.html?id=${row.teamId}'">
       <span class="d-rank">${i + 1}</span><span class="d-team">${tm ? tagBlock(tm, 24) : ""}${name}</span>
       <span class="mono">${row.wins}</span><span class="mono">${row.losses}</span>
     </div>`;
@@ -1640,7 +1641,7 @@ function tournamentParticipantsHTML(teams){
   return `
     <div class="participants-grid">
       ${teams.map(tm => `
-        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='/team-profile.html?id=${tm.id}'">
+        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='team-profile.html?id=${tm.id}'">
           <span class="d-team">${tagBlock(tm, 30)}${tm.name}</span>
           <span class="mono">${(tm.rating || 0).toFixed(2)} RTG</span>
         </div>
@@ -1676,7 +1677,7 @@ function tournamentTop5HTML(players){
   return `
     <div class="top10-grid">
       ${top10.map((p, i) => `
-        <button type="button" class="top10-card ${getMedalClass(i)}" onclick="window.location.href='/player-profile.html?id=${p.id}'">
+        <button type="button" class="top10-card ${getMedalClass(i)}" onclick="window.location.href='player-profile.html?id=${p.id}'">
           <span class="top10-rank">${getMedalIcon(i)}</span>
           <span class="top10-nick">${p.nick}</span>
           <span class="top10-team">${teamTag(teamById(p.teamId))}</span>
@@ -1688,7 +1689,7 @@ function tournamentTop5HTML(players){
     <div id="allPlayersList" style="display:none; margin-top:16px;">
       <div class="data-table">
         ${players.slice(10).map((p, i) => `
-          <div class="data-row" onclick="window.location.href='/player-profile.html?id=${p.id}'">
+          <div class="data-row" onclick="window.location.href='player-profile.html?id=${p.id}'">
             <span class="d-rank">#${i + 11}</span>
             <span class="d-team">${p.nick} <span class="d-dim">${teamTag(teamById(p.teamId))}</span></span>
             <span class="mono">${(p.rating || 0).toFixed(2)}</span>
@@ -3239,7 +3240,7 @@ function fillTournamentSelect(sel, selected, withEmpty){
 function bindMatchClicks(){
   document.querySelectorAll("[data-match]").forEach(el => {
     el.onclick = () => {
-      window.location.href = `/match-details.html?id=${el.dataset.match}`;
+      window.location.href=`match-details.html?id=${el.dataset.match}`;
     };
   });
 }
@@ -3253,7 +3254,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (openAuthBtn) {
     openAuthBtn.addEventListener("click", () => {
       if (currentUser) {
-        window.location.href = "/account.html";
+        window.location.href="account.html";
       } else {
         document.getElementById("authModal").classList.add("open");
       }
@@ -3328,10 +3329,29 @@ document.addEventListener("DOMContentLoaded", () => {
   // Mobile menu toggle
   const mobileMenuBtn = document.getElementById("mobileMenuBtn");
   const mobileMenu = document.getElementById("mobileMenu");
+  const closeMobileMenu = () => {
+    mobileMenuBtn?.classList.remove("active");
+    mobileMenu?.classList.remove("open");
+  };
   if (mobileMenuBtn && mobileMenu) {
-    mobileMenuBtn.addEventListener("click", () => {
+    mobileMenuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
       mobileMenuBtn.classList.toggle("active");
       mobileMenu.classList.toggle("open");
+    });
+    // Закрыть меню при клике на пункт навигации
+    mobileMenu.querySelectorAll(".mobile-nav-link").forEach(link => {
+      link.addEventListener("click", closeMobileMenu);
+    });
+    // Закрыть меню при клике вне его
+    document.addEventListener("click", (e) => {
+      if (mobileMenu.classList.contains("open") && !mobileMenu.contains(e.target) && e.target !== mobileMenuBtn && !mobileMenuBtn.contains(e.target)) {
+        closeMobileMenu();
+      }
+    });
+    // Закрыть меню по Escape
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMobileMenu();
     });
   }
 
@@ -3340,11 +3360,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (mobileOpenAuth) {
     mobileOpenAuth.addEventListener("click", () => {
       if (currentUser) {
-        window.location.href = "/account.html";
+        window.location.href="account.html";
       } else {
         document.getElementById("authModal").classList.add("open");
-        mobileMenuBtn.classList.remove("active");
-        mobileMenu.classList.remove("open");
+        closeMobileMenu();
       }
     });
   }
@@ -3532,7 +3551,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const promoteUser = e.target.closest("[data-promote-user]"); if (promoteUser) return void promoteUserToAdmin(promoteUser.dataset.promoteUser);
     const delUserBtn = e.target.closest("[data-delete-user]"); if (delUserBtn) return void deleteUser(delUserBtn.dataset.deleteUser);
     const regTournament = e.target.closest("[data-register-tournament]"); if (regTournament) return handleRegisterClick(regTournament.dataset.registerTournament);
-    const bracketTeamLink = e.target.closest("[data-bracket-team-link]"); if (bracketTeamLink) return void (window.location.href = `/team-profile.html?id=${bracketTeamLink.dataset.bracketTeamLink}`);
+    const bracketTeamLink = e.target.closest("[data-bracket-team-link]"); if (bracketTeamLink) return void (window.location.href=`team-profile.html?id=${bracketTeamLink.dataset.bracketTeamLink}`);
     const beClearMatch = e.target.closest("[data-be-clear-match]");
     if (beClearMatch && bracketWorking) {
       const ri = Number(beClearMatch.dataset.round), mi = Number(beClearMatch.dataset.match);
@@ -3640,6 +3659,8 @@ function applyLanguage(){
   renderPageContent();
   updateAuthUI();
   document.getElementById("langToggle").textContent = LANG === "ru" ? "EN" : "RU";
+  const mobileLangBtn = document.getElementById("mobileLangToggle");
+  if (mobileLangBtn) mobileLangBtn.textContent = LANG === "ru" ? "EN" : "RU";
   localStorage.setItem("mlt_lang", LANG);
 }
 
