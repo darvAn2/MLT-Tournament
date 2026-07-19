@@ -296,21 +296,54 @@ let pendingNickname = null;
 /* --------------------------------------------------------------
    AUTH
 -------------------------------------------------------------- */
+// Небольшая пауза — используется для повторных попыток чтения из Firestore.
+const wait = ms => new Promise(res => setTimeout(res, ms));
+
+// getDoc иногда падает с ошибкой "client is offline" в первые мгновения
+// после входа — Firestore ещё не успел установить соединение (особенно
+// на медленном/нестабильном интернете). Раньше эта ошибка просто
+// вылетала необработанной, из-за чего строки updateAuthUI()/
+// renderPageContent() ниже НИКОГДА не выполнялись: модалка входа
+// закрывалась (это происходит в handleLogin, до этого места), а шапка
+// сайта так и оставалась с кнопкой «Войти» — как будто вход не удался,
+// хотя на самом деле человек уже был залогинен. Теперь при такой ошибке
+// делаем несколько попыток подряд, прежде чем сдаться.
+async function getDocWithRetry(ref, attempts = 4, delayMs = 700){
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await getDoc(ref);
+    } catch (err) {
+      const isLastAttempt = i === attempts - 1;
+      if (isLastAttempt) throw err;
+      await wait(delayMs);
+    }
+  }
+}
+
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;
-  if (user) {
-    let snap = await getDoc(doc(db, "users", user.uid));
-    if (!snap.exists()) {
-      const anyUsers = await getDocs(collection(db, "users"));
-      const role = anyUsers.empty ? "admin" : "user";
-      const nickname = pendingNickname || user.email.split("@")[0];
-      pendingNickname = null;
-      await setDoc(doc(db, "users", user.uid), { email: user.email, nickname, role, teamId: null, createdAt: serverTimestamp() });
-      snap = await getDoc(doc(db, "users", user.uid));
+  try {
+    if (user) {
+      let snap = await getDocWithRetry(doc(db, "users", user.uid));
+      if (!snap.exists()) {
+        const anyUsers = await getDocs(collection(db, "users"));
+        const role = anyUsers.empty ? "admin" : "user";
+        const nickname = pendingNickname || user.email.split("@")[0];
+        pendingNickname = null;
+        await setDoc(doc(db, "users", user.uid), { email: user.email, nickname, role, teamId: null, createdAt: serverTimestamp() });
+        snap = await getDocWithRetry(doc(db, "users", user.uid));
+      }
+      currentUserDoc = { id: user.uid, ...snap.data() };
+    } else {
+      currentUserDoc = null;
     }
-    currentUserDoc = { id: user.uid, ...snap.data() };
-  } else {
-    currentUserDoc = null;
+  } catch (err) {
+    // Даже если Firestore так и не ответил (сеть действительно недоступна),
+    // не оставляем человека в подвешенном состоянии с "неработающей"
+    // шапкой сайта — показываем хотя бы email и понятное сообщение вместо
+    // молчаливого зависания.
+    console.error("Не удалось загрузить профиль пользователя:", err);
+    if (user) currentUserDoc = { id: user.uid, email: user.email, nickname: user.email.split("@")[0], role: "user", teamId: null, _loadError: true };
   }
   updateAuthUI();
   renderPageContent();
@@ -577,6 +610,22 @@ function renderAccountPage(){
   }
   gate.style.display = "none";
   shell.style.display = "";
+
+  const existingWarn = shell.querySelector("#acLoadErrorWarn");
+  if (currentUserDoc._loadError) {
+    if (!existingWarn) {
+      const warn = document.createElement("p");
+      warn.id = "acLoadErrorWarn";
+      warn.className = "form-note";
+      warn.style.color = "var(--loss)";
+      warn.textContent = LANG === "en"
+        ? "Some profile data couldn't load due to a connection issue. Please refresh the page."
+        : "Часть данных профиля не загрузилась из-за проблемы с соединением. Обновите страницу.";
+      shell.prepend(warn);
+    }
+  } else if (existingWarn) {
+    existingWarn.remove();
+  }
 
   // Hero: фото, ник, роль, дата регистрации
   const photoBox = document.getElementById("acPhotoBox");
