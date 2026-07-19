@@ -31,7 +31,7 @@ export const I18N = {
 
     // Рейтинги
     pageRankingsTitle: "Рейтинги", tabTeams: "Команды", tabPlayers: "Игроки",
-    thRank: "#", thTeam: "Команда", thWinrate: "Винрейт", thRating: "Рейтинг", thTrophies: "Трофеи", thElo: "ELO",
+    thRank: "#", thTeam: "Команда", thWinrate: "Винрейт", thRating: "Рейтинг", thTrophies: "Трофеи", thElo: "ELO", thForm: "Форма", thMltPoints: "MLT очки",
     stP: "И", stW: "В", stD: "Н", stL: "П", stPts: "О", swissRound: "Раунд",
     thPlayer: "Игрок", thKD: "K/D", thADR: "ADR", thKAST: "KAST",
     loadingTeamsTable: "Загрузка рейтинга команд...", loadingPlayersTable: "Загрузка рейтинга игроков...",
@@ -49,7 +49,7 @@ export const I18N = {
     // Контакты
     pageContactsTitle: "Контакты",
     contactsIntro: "По вопросам турниров, регистрации команд, партнёрства и технической поддержки — напишите нам удобным способом или заполните форму ниже.",
-    contactUsTitle: "Связаться с нами", labelEmail: "Email", labelTelegram: "Telegram", labelDiscord: "Discord",
+    contactUsTitle: "Связаться с нами", labelEmail: "Email", labelTelegram: "Telegram",
     feedbackTitle: "Обратная связь", labelYourName: "Ваше имя", placeholderYourName: "Как к вам обращаться",
     labelReplyEmail: "Email для ответа", placeholderReplyEmail: "you@example.com",
     labelMessage: "Сообщение", placeholderMessage: "Опишите ваш вопрос или предложение",
@@ -83,7 +83,7 @@ export const I18N = {
     createTeamHintTournament: "Сначала создайте команду — после этого заявка на турнир отправится автоматически.",
 
     // Tournament reg modal
-    tournamentRegTitle: "Заявка на турнир", labelContact: "Контакт для связи (Telegram, Discord и т.п.)",
+    tournamentRegTitle: "Заявка на турнир", labelContact: "Контакт для связи (Telegram и т.п.)",
     btnSubmitRequest: "Подать заявку",
 
     // Detail pages
@@ -165,7 +165,7 @@ export const I18N = {
     emptyLive: "No matches live right now", emptyResults: "No results yet",
 
     pageRankingsTitle: "Rankings", tabTeams: "Teams", tabPlayers: "Players",
-    thRank: "#", thTeam: "Team", thWinrate: "Winrate", thRating: "Rating", thTrophies: "Trophies", thElo: "ELO",
+    thRank: "#", thTeam: "Team", thWinrate: "Winrate", thRating: "Rating", thTrophies: "Trophies", thElo: "ELO", thForm: "Form", thMltPoints: "MLT points",
     stP: "P", stW: "W", stD: "D", stL: "L", stPts: "Pts", swissRound: "Round",
     thPlayer: "Player", thKD: "K/D", thADR: "ADR", thKAST: "KAST",
     loadingTeamsTable: "Loading team rankings...", loadingPlayersTable: "Loading player rankings...",
@@ -180,7 +180,7 @@ export const I18N = {
 
     pageContactsTitle: "Contacts",
     contactsIntro: "For questions about tournaments, team registration, partnerships or technical support — reach out however is convenient, or fill in the form below.",
-    contactUsTitle: "Get in touch", labelEmail: "Email", labelTelegram: "Telegram", labelDiscord: "Discord",
+    contactUsTitle: "Get in touch", labelEmail: "Email", labelTelegram: "Telegram",
     feedbackTitle: "Feedback", labelYourName: "Your name", placeholderYourName: "How should we address you",
     labelReplyEmail: "Reply email", placeholderReplyEmail: "you@example.com",
     labelMessage: "Message", placeholderMessage: "Describe your question or suggestion",
@@ -210,7 +210,7 @@ export const I18N = {
     btnCreateTeamSubmit: "Create team", btnSaveTeam: "Save changes",
     createTeamHintTournament: "Create a team first — the tournament request will be sent automatically afterwards.",
 
-    tournamentRegTitle: "Tournament request", labelContact: "Contact info (Telegram, Discord, etc.)",
+    tournamentRegTitle: "Tournament request", labelContact: "Contact info (Telegram, etc.)",
     btnSubmitRequest: "Submit request",
 
     backToMatches: "← Back to matches", backToRankings: "← Back to rankings", backToTournaments: "← Back to tournaments",

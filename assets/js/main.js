@@ -485,7 +485,7 @@ function openProfileModal(){
     });
   }
 
-  // Контакты (Telegram/Discord/Faceit)
+  // Контакты (Telegram/Faceit)
   const contactBox = document.getElementById("pmContactBox");
   if (contactBox) {
     const lastUpdated = currentUserDoc.faceitUpdatedAt && currentUserDoc.faceitUpdatedAt.toDate
@@ -496,7 +496,6 @@ function openProfileModal(){
         <h3>${t("contactsSectionTitle")}</h3>
         <form id="profileContactsForm" style="display:flex; flex-direction:column; gap:12px;">
           <div class="field"><label>${t("labelTelegram")}</label><input type="text" id="pmTelegram" placeholder="@username" value="${currentUserDoc.telegram || ""}"></div>
-          <div class="field"><label>${t("labelDiscord")}</label><input type="text" id="pmDiscord" placeholder="username" value="${currentUserDoc.discord || ""}"></div>
           <div class="field"><label>${t("labelFaceitNickname")}</label><input type="text" id="pmFaceitNickname" placeholder="nickname" value="${currentUserDoc.faceitNickname || ""}"></div>
           <button class="btn primary sm" type="submit">${t("btnSaveContacts")}</button>
           <p class="form-note" id="pmContactsNote"></p>
@@ -541,7 +540,7 @@ async function submitProfileNickname(e){
 }
 
 /* --------------------------------------------------------------
-   КОНТАКТЫ ПРОФИЛЯ (Telegram/Discord/Faceit) + запрос обновления Elo
+   КОНТАКТЫ ПРОФИЛЯ (Telegram/Faceit) + запрос обновления Elo
    Ключ Faceit Data API НИКОГДА не хранится в этом файле — обновление
    Elo делает отдельный процесс на GitHub Actions по расписанию (см.
    .github/workflows/faceit-elo-sync.yml и FACEIT_SETUP.md). Клиент
@@ -552,12 +551,11 @@ async function submitProfileNickname(e){
 async function submitProfileContacts(e){
   e.preventDefault();
   const telegram = document.getElementById("pmTelegram").value.trim();
-  const discord = document.getElementById("pmDiscord").value.trim();
   const faceitNickname = document.getElementById("pmFaceitNickname").value.trim();
   const note = document.getElementById("pmContactsNote");
   note.textContent = ""; note.style.color = "";
   try {
-    const patch = { telegram: telegram || null, discord: discord || null, faceitNickname: faceitNickname || null };
+    const patch = { telegram: telegram || null, faceitNickname: faceitNickname || null };
     await updateDoc(doc(db, "users", currentUser.uid), patch);
     Object.assign(currentUserDoc, patch);
     note.style.color = "var(--win)";
@@ -684,8 +682,6 @@ function renderAccountPage(){
   // Вкладка «Faceit и контакты»
   const telegramInput = document.getElementById("acTelegram");
   if (telegramInput) telegramInput.value = currentUserDoc.telegram || "";
-  const discordInput = document.getElementById("acDiscord");
-  if (discordInput) discordInput.value = currentUserDoc.discord || "";
   const faceitInput = document.getElementById("acFaceitNickname");
   if (faceitInput) faceitInput.value = currentUserDoc.faceitNickname || "";
   const faceitStatsBox = document.getElementById("acFaceitStats");
@@ -744,12 +740,11 @@ async function submitAccountPhoto(e){
 async function submitAccountContacts(e){
   e.preventDefault();
   const telegram = document.getElementById("acTelegram").value.trim();
-  const discord = document.getElementById("acDiscord").value.trim();
   const faceitNickname = document.getElementById("acFaceitNickname").value.trim();
   const note = document.getElementById("acContactsNote");
   note.textContent = ""; note.style.color = "";
   try {
-    const patch = { telegram: telegram || null, discord: discord || null, faceitNickname: faceitNickname || null };
+    const patch = { telegram: telegram || null, faceitNickname: faceitNickname || null };
     await updateDoc(doc(db, "users", currentUser.uid), patch);
     Object.assign(currentUserDoc, patch);
     note.style.color = "var(--win)";
@@ -1137,17 +1132,17 @@ function renderMatches(){
 }
 
 function renderRankings(){
-  const sortedTeams = [...approvedTeams()].sort((a,b) => (b.rating||0) - (a.rating||0));
+  const sortedTeams = [...approvedTeams()].sort((a,b) => (b.mltPoints||0) - (a.mltPoints||0) || (b.rating||0) - (a.rating||0));
   const teamsTable = document.getElementById("teamsTable");
   if (teamsTable) {
     teamsTable.innerHTML = `
-      <div class="data-row head" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr;"><span>${t("thRank")}</span><span>${t("thTeam")}</span><span>${t("thWinrate")}</span><span>${t("thElo")}</span><span>${t("thRating")}</span><span>${t("thTrophies")}</span></div>
+      <div class="data-row head" style="grid-template-columns:46px 2fr 1fr 1fr 1.6fr;"><span>${t("thRank")}</span><span>${t("thTeam")}</span><span>${t("thMltPoints")}</span><span>${t("thWinrate")}</span><span>${t("thForm")}</span></div>
       ${sortedTeams.map((tm,i) => {
         const roster = PLAYERS.filter(p => p.teamId === tm.id);
         return `
-        <div class="data-row" data-team-row="${tm.id}" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr; cursor:pointer;">
+        <div class="data-row" data-team-row="${tm.id}" style="grid-template-columns:46px 2fr 1fr 1fr 1.6fr; cursor:pointer;">
           <span class="d-rank">${i+1}</span><span class="d-team">${tagBlock(tm, 30)}${tm.name}</span>
-          <span>${tm.winrate||0}%</span><span class="mono">${tm.elo||1000}</span><span class="mono">${(tm.rating||0).toFixed(2)}</span><span>${Array.isArray(tm.trophies) ? tm.trophies.length : (tm.trophies||0)}</span>
+          <span class="mono">${tm.mltPoints||0}</span><span>${tm.winrate||0}%</span><span>${(tm.form&&tm.form.length)?formPills(tm.form):'<span class="d-dim">—</span>'}</span>
         </div>
         <div class="team-row-expand" id="teamExpand-${tm.id}">
           <div class="team-row-expand-inner">
@@ -1390,7 +1385,7 @@ function renderPlayerProfilePage(){
 
   // Подтягиваем данные из личного кабинета пользователя с совпадающим ником:
   // фото профиля (если у самой карточки игрока фото не задано), контакты
-  // (Telegram/Discord) и Elo/уровень Faceit.
+  // (Telegram) и Elo/уровень Faceit.
   const linkedUser = findLinkedUserByNick(p.nick);
   const photoUrl = p.photoUrl || (linkedUser && linkedUser.photoUrl) || null;
   const avatarStyle = photoUrl ? `background-image:url('${photoUrl}');background-size:cover;background-position:center;` : "";
@@ -1399,9 +1394,6 @@ function renderPlayerProfilePage(){
   if (linkedUser && linkedUser.telegram) {
     const handle = String(linkedUser.telegram).replace(/^@/, "");
     contactChips.push(`<a class="achv" href="https://t.me/${encodeURIComponent(handle)}" target="_blank" rel="noopener">Telegram: @${handle}</a>`);
-  }
-  if (linkedUser && linkedUser.discord) {
-    contactChips.push(`<span class="achv">Discord: ${linkedUser.discord}</span>`);
   }
   const faceitNick = (linkedUser && linkedUser.faceitNickname) || p.faceitNickname;
   if (faceitNick) {
@@ -2018,7 +2010,7 @@ function renderAdminTeams(){
     
   if (!filteredTeams.length) { allBox.innerHTML = `<div class="empty-state">${searchTerm ? "Ничего не найдено" : t("adminNoTeams")}</div>`; return; }
   allBox.innerHTML = `
-    <div class="data-row head"><span>Команда</span><span>Статус</span><span>Рейтинг</span><span>Трофеи</span><span></span></div>
+    <div class="data-row head"><span>Команда</span><span>Статус</span><span>MLT очки</span><span>Винрейт</span><span></span></div>
     ${filteredTeams.map(tm => {
       const st = teamStatus(tm);
       const badge = st === "pending" ? `<span class="app-status-badge pending">${t("teamStatusPending")}</span>`
@@ -2028,8 +2020,8 @@ function renderAdminTeams(){
       <div class="data-row">
         <span class="d-team">${tagBlock(tm, 28)}${tm.name}</span>
         <span>${badge}</span>
-        <span class="mono">${(tm.rating || 0).toFixed(2)}</span>
-        <span>${Array.isArray(tm.trophies) ? tm.trophies.length : (tm.trophies || 0)}</span>
+        <span class="mono">${tm.mltPoints || 0}</span>
+        <span>${tm.winrate || 0}%</span>
         <span class="row-actions">
           <button class="btn ghost sm" data-edit-team="${tm.id}">✎</button>
           <button class="btn danger sm" data-del-team="${tm.id}">✕</button>
@@ -2052,6 +2044,7 @@ async function rejectTeam(id){
 function openAddTeam(){
   editingTeamId = null;
   document.getElementById("adminTeamForm").reset();
+  document.getElementById("atMltPoints").value = 0;
   document.getElementById("atModalTitle").textContent = "Добавить команду";
   document.getElementById("atSubmitBtn").textContent = "Добавить";
   openModal("adminTeamModal");
@@ -2063,6 +2056,7 @@ function openEditTeam(id){
   editingTeamId = id;
   document.getElementById("adminTeamForm").reset();
   document.getElementById("atName").value = t.name || "";
+  document.getElementById("atMltPoints").value = t.mltPoints || 0;
   document.getElementById("atModalTitle").textContent = "Редактировать команду";
   document.getElementById("atSubmitBtn").textContent = "Сохранить";
   openModal("adminTeamModal");
@@ -2077,6 +2071,7 @@ async function submitTeamForm(e){
   e.preventDefault();
   const name = document.getElementById("atName").value.trim();
   const fileInput = document.getElementById("atLogo");
+  const mltPoints = parseInt(document.getElementById("atMltPoints").value, 10) || 0;
   const note = document.getElementById("atNote");
   note.textContent = ""; note.style.color = "";
   try {
@@ -2085,13 +2080,13 @@ async function submitTeamForm(e){
       logoUrl = await fileToResizedDataURL(fileInput.files[0], 200, 0.72);
     }
     if (editingTeamId) {
-      const patch = { name };
+      const patch = { name, mltPoints };
       if (logoUrl) patch.logoUrl = logoUrl;
       await updateDoc(doc(db, "teams", editingTeamId), patch);
     } else {
       await setDoc(doc(collection(db, "teams")), {
         name, logoUrl: logoUrl || null, ownerUid: null,
-        main: [], reserve: [], rating: 0, winrate: 0, trophies: 0,
+        main: [], reserve: [], rating: 0, winrate: 0, trophies: 0, mltPoints,
         form: [], mapWinrate: {}, status: "approved", createdAt: serverTimestamp()
       });
     }
@@ -3169,7 +3164,7 @@ async function recalcTeamStats(teamId){
     ? +(teamPlayers.reduce((s, p) => s + (p.rating || 0), 0) / teamPlayers.length).toFixed(2)
     : 0;
 
-  await updateDoc(doc(db, "teams", teamId), { winrate, form: form.slice(-5), mapWinrate, rating: playerRating });
+  await updateDoc(doc(db, "teams", teamId), { winrate, form: form.slice(-10), mapWinrate, rating: playerRating });
 }
 
 /* --------------------------------------------------------------
