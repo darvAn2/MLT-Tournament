@@ -125,49 +125,68 @@ let adminLoggedIn = false;
 let pendingRequestsCount = 0;
 
 /* --------------------------------------------------------------
-   CAPTCHA (reCAPTCHA v2 «Я не робот») — форма регистрации аккаунта
-   и заявки на турнир. Ключ задаётся в config.js (window.MLT_CONFIG.
-   recaptcha.siteKey). Если ключ не задан, виджеты просто не рисуются
-   и проверка не блокирует отправку форм (чтобы сайт не сломался у
-   тех, кто ещё не завёл себе ключ).
-   ВАЖНО: это защита только от отправки через саму HTML-форму — она
-   не защищает от прямых запросов к Firebase в обход интерфейса.
-   Настоящая защита на уровне Firestore — это Firebase App Check.
--------------------------------------------------------------- */
-const RECAPTCHA_SITE_KEY = (window.MLT_CONFIG && window.MLT_CONFIG.recaptcha && window.MLT_CONFIG.recaptcha.siteKey) || "";
-let regCaptchaWidgetId = null;
-let trCaptchaWidgetId = null;
+   CAPTCHA — простая самостоятельная проверка «я не робот» (пример:
+   сложить два числа) для формы регистрации аккаунта и заявки на
+   турнир.
 
-function renderCaptchaWidgets(){
-  if (!RECAPTCHA_SITE_KEY) return;
-  if (!(window.grecaptcha && window.grecaptcha.render)) {
-    setTimeout(renderCaptchaWidgets, 200);
-    return;
-  }
-  const regBox = document.getElementById("regCaptcha");
-  if (regBox && regCaptchaWidgetId === null) {
-    regCaptchaWidgetId = window.grecaptcha.render(regBox, { sitekey: RECAPTCHA_SITE_KEY });
-  }
-  const trBox = document.getElementById("trCaptcha");
-  if (trBox && trCaptchaWidgetId === null) {
-    trCaptchaWidgetId = window.grecaptcha.render(trBox, { sitekey: RECAPTCHA_SITE_KEY });
-  }
+   Раньше здесь использовалась Google reCAPTCHA, которая грузится со
+   скрипта www.google.com/recaptcha/api.js. У части посетителей из РФ
+   этот скрипт не загружается вообще (блокировки/нестабильный доступ
+   к сервисам Google), из-за чего виджет капчи никогда не появлялся —
+   а форма при этом ждала ответ капчи и НИКОГДА не пропускала
+   отправку. Человек просто не мог зарегистрироваться или подать
+   заявку, и это выглядело как «сайт сломан».
+
+   Новая капча ничего не грузит из интернета — считается прямо в
+   браузере, поэтому не может «зависнуть» или быть заблокированной.
+   Это не защита военного уровня, но она сразу отсекает простых ботов
+   и не мешает живым людям. Настоящая защита на уровне базы данных —
+   это Firestore Rules (см. firestore.rules) и, при желании, Firebase
+   App Check.
+-------------------------------------------------------------- */
+const captchaAnswers = Object.create(null); // boxId -> правильный ответ (число)
+
+function captchaMarkup(boxId){
+  const a = 1 + Math.floor(Math.random() * 8);
+  const b = 1 + Math.floor(Math.random() * 8);
+  captchaAnswers[boxId] = a + b;
+  const label = LANG === "en" ? "Confirm you're human" : "Подтвердите, что вы не робот";
+  return `
+    <div class="simple-captcha" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <span style="font-size:13px; opacity:0.85;">${label}: <b>${a} + ${b} = ?</b></span>
+      <input type="text" inputmode="numeric" autocomplete="off" class="simple-captcha-input"
+        data-captcha-box="${boxId}" style="width:70px;" maxlength="3">
+    </div>
+  `;
 }
 
-// Возвращает true, если капчу можно (или не нужно) пропускать дальше.
-// Если ключ капчи не настроен в config.js — проверка отключена.
-function checkCaptcha(widgetId, noteEl){
-  if (!RECAPTCHA_SITE_KEY) return true;
-  const ok = widgetId !== null && window.grecaptcha && window.grecaptcha.getResponse(widgetId);
+// Рисует (или перерисовывает) капчу в контейнере с данным id, если он есть на странице.
+function renderCaptchaWidgets(){
+  ["regCaptcha", "trCaptcha"].forEach(boxId => {
+    const box = document.getElementById(boxId);
+    if (box) box.innerHTML = captchaMarkup(boxId);
+  });
+}
+
+// Возвращает true, если ответ на капчу верный. boxId — id контейнера капчи
+// (например "regCaptcha" или "trCaptcha"), а не число, как раньше у reCAPTCHA.
+function checkCaptcha(boxId, noteEl){
+  const box = document.getElementById(boxId);
+  if (!box) return true; // на этой странице капчи нет вообще — не блокируем
+  const input = box.querySelector(".simple-captcha-input");
+  const given = input ? parseInt(input.value, 10) : NaN;
+  const ok = !Number.isNaN(given) && given === captchaAnswers[boxId];
   if (!ok && noteEl) {
     noteEl.style.color = "var(--loss)";
-    noteEl.textContent = LANG === "en" ? "Please confirm you're not a robot." : "Подтвердите, что вы не робот.";
+    noteEl.textContent = LANG === "en" ? "Please solve the check above correctly." : "Решите пример выше правильно.";
   }
-  return !!ok;
+  return ok;
 }
 
-function resetCaptcha(widgetId){
-  if (widgetId !== null && window.grecaptcha && window.grecaptcha.reset) window.grecaptcha.reset(widgetId);
+// Перегенерирует пример (после успешной или неуспешной отправки формы).
+function resetCaptcha(boxId){
+  const box = document.getElementById(boxId);
+  if (box) box.innerHTML = captchaMarkup(boxId);
 }
 let pendingAccountsCount = 0;
 
@@ -317,7 +336,7 @@ async function handleRegister(e){
   const nickname = document.getElementById("regNickname").value.trim() || email.split("@")[0];
   const msg = document.getElementById("authRegisterMsg");
   msg.textContent = ""; msg.style.color = "";
-  if (!checkCaptcha(regCaptchaWidgetId, msg)) return false;
+  if (!checkCaptcha("regCaptcha", msg)) return false;
   try {
     pendingNickname = nickname;
     await createUserWithEmailAndPassword(auth, email, pass);
@@ -325,12 +344,12 @@ async function handleRegister(e){
     // местом — обработчиком onAuthStateChanged выше, который сработает
     // сразу после успешного createUserWithEmailAndPassword.
     document.getElementById("authModal").classList.remove("open");
-    resetCaptcha(regCaptchaWidgetId);
+    resetCaptcha("regCaptcha");
   } catch (err) {
     pendingNickname = null;
     msg.style.color = "var(--loss)";
     msg.textContent = friendlyAuthError(err);
-    resetCaptcha(regCaptchaWidgetId);
+    resetCaptcha("regCaptcha");
   }
   return false;
 }
@@ -855,7 +874,7 @@ async function submitTournamentReg(e){
     note.textContent = t("tournamentRegNeedApprovedTeam");
     return;
   }
-  if (!checkCaptcha(trCaptchaWidgetId, note)) return;
+  if (!checkCaptcha("trCaptcha", note)) return;
   try {
     const already = REQUESTS.find(r => r.tournamentId === tournamentId && r.teamId === currentUserDoc.teamId && r.status !== "rejected");
     if (already) {
@@ -869,12 +888,12 @@ async function submitTournamentReg(e){
     });
     note.style.color = "var(--win)";
     note.textContent = LANG === "en" ? "Request sent, awaiting admin approval." : "Заявка отправлена, ожидайте подтверждения от админа.";
-    resetCaptcha(trCaptchaWidgetId);
+    resetCaptcha("trCaptcha");
     setTimeout(() => closeModal("tournamentRegModal"), 1200);
   } catch (err) {
     note.style.color = "var(--loss)";
     note.textContent = (LANG === "en" ? "Error: " : "Ошибка: ") + (err.message || err);
-    resetCaptcha(trCaptchaWidgetId);
+    resetCaptcha("trCaptcha");
   }
 }
 
