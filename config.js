@@ -38,14 +38,14 @@ window.MLT_CONFIG = {
     heading: "Связаться с нами",
     intro:
       "По вопросам турниров, регистрации команд, партнёрства и технической поддержки — напишите нам удобным способом или заполните форму ниже.",
-    email: "info@mlt-esports.ru",
+    email: "mltcs2tournament@gmail.com",
     emailLabel: "Email",
-    telegram: "https://t.me/mlt_esports",
+    telegram: "https://t.me/MLT_CS2",
     telegramLabel: "Telegram",
     telegramHandle: "@mlt_esports",
     discord: "https://discord.gg/mlt",
     discordLabel: "Discord",
-    discordHandle: "discord.gg/mlt",
+    discordHandle: "",
     formTitle: "Обратная связь",
     formNote: "Сообщение попадёт администратору сайта.",
     submitButton: "Отправить сообщение",
@@ -59,10 +59,10 @@ window.MLT_CONFIG = {
 
   /** Ссылки на соцсети (футер и контакты) */
   social: {
-    telegram: "https://t.me/mlt_esports",
-    discord: "https://discord.gg/mlt",
-    twitch: "https://twitch.tv/mlt",
-    vk: "https://vk.com/mlt",
+    telegram: "https://t.me/MLT_CS2",
+    discord: "",
+    twitch: "https://www.twitch.tv/mlt_cs2",
+    vk: "https://vk.ru/mlt_cs2",
   },
 
   footer: {
