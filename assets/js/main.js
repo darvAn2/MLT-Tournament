@@ -268,6 +268,12 @@ function fileToResizedDataURL(file, maxSize = 200, quality = 0.72) {
   });
 }
 
+// Никнейм, введённый в форме регистрации — передаётся в onAuthStateChanged,
+// который является ЕДИНСТВЕННЫМ местом создания профиля пользователя
+// (раньше handleRegister тоже создавал документ, что приводило к гонке
+// двух параллельных записей и permission-denied при регистрации).
+let pendingNickname = null;
+
 /* --------------------------------------------------------------
    AUTH
 -------------------------------------------------------------- */
@@ -278,7 +284,8 @@ onAuthStateChanged(auth, async (user) => {
     if (!snap.exists()) {
       const anyUsers = await getDocs(collection(db, "users"));
       const role = anyUsers.empty ? "admin" : "user";
-      const nickname = user.email.split("@")[0];
+      const nickname = pendingNickname || user.email.split("@")[0];
+      pendingNickname = null;
       await setDoc(doc(db, "users", user.uid), { email: user.email, nickname, role, teamId: null, createdAt: serverTimestamp() });
       snap = await getDoc(doc(db, "users", user.uid));
     }
@@ -312,13 +319,15 @@ async function handleRegister(e){
   msg.textContent = ""; msg.style.color = "";
   if (!checkCaptcha(regCaptchaWidgetId, msg)) return false;
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    const anyUsers = await getDocs(collection(db, "users"));
-    const role = anyUsers.size <= 1 ? "admin" : "user";
-    await setDoc(doc(db, "users", cred.user.uid), { email, nickname, role, teamId: null, createdAt: serverTimestamp() }, { merge: true });
+    pendingNickname = nickname;
+    await createUserWithEmailAndPassword(auth, email, pass);
+    // Документ пользователя (с ролью и никнеймом) создаётся единственным
+    // местом — обработчиком onAuthStateChanged выше, который сработает
+    // сразу после успешного createUserWithEmailAndPassword.
     document.getElementById("authModal").classList.remove("open");
     resetCaptcha(regCaptchaWidgetId);
   } catch (err) {
+    pendingNickname = null;
     msg.style.color = "var(--loss)";
     msg.textContent = friendlyAuthError(err);
     resetCaptcha(regCaptchaWidgetId);
@@ -351,6 +360,11 @@ function friendlyAuthError(err){
     "auth/invalid-credential": "Неверный email или пароль.",
     "auth/wrong-password": "Неверный email или пароль.",
     "auth/user-not-found": "Пользователь с таким email не найден.",
+    "auth/operation-not-allowed": "Вход по email/паролю выключен в настройках Firebase (Authentication → Sign-in method).",
+    "auth/too-many-requests": "Слишком много попыток. Подождите немного и попробуйте снова.",
+    "auth/network-request-failed": "Проблема с сетью. Проверьте подключение к интернету.",
+    "auth/unauthorized-domain": "Этот домен не разрешён в настройках Firebase (Authentication → Settings → Authorized domains).",
+    "permission-denied": "Нет доступа на запись в базу данных. Обратитесь к администратору сайта.",
   };
   const mapEn = {
     "auth/email-already-in-use": "This email is already registered.",
@@ -359,6 +373,11 @@ function friendlyAuthError(err){
     "auth/invalid-credential": "Incorrect email or password.",
     "auth/wrong-password": "Incorrect email or password.",
     "auth/user-not-found": "No user found with this email.",
+    "auth/operation-not-allowed": "Email/password sign-in is disabled in Firebase settings (Authentication → Sign-in method).",
+    "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
+    "auth/network-request-failed": "Network problem. Check your internet connection.",
+    "auth/unauthorized-domain": "This domain isn't allowed in Firebase settings (Authentication → Settings → Authorized domains).",
+    "permission-denied": "No permission to write to the database. Contact the site admin.",
   };
   const map = LANG === "en" ? mapEn : mapRu;
   return map[code] || ((LANG === "en" ? "Error: " : "Ошибка: ") + code);
