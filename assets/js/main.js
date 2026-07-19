@@ -1005,6 +1005,21 @@ function renderHome(){
       `<div class="empty-state">${t("emptyHomeNews")}</div>`;
   }
 
+  const homeTopTeams = document.getElementById("homeTopTeams");
+  if (homeTopTeams) {
+    const topTeams = [...approvedTeams()].sort((a,b) => (b.rating||0) - (a.rating||0)).slice(0,3);
+    const medalClass = ["gold","silver","bronze"];
+    const medalIcon = ["🥇","🥈","🥉"];
+    homeTopTeams.innerHTML = topTeams.map((tm,i) => `
+      <button type="button" class="top10-card ${medalClass[i]}" onclick="window.location.href='team-profile.html?id=${tm.id}'">
+        <span class="top10-rank">${medalIcon[i]}</span>
+        <span class="top10-nick">${tm.name}</span>
+        <span class="top10-team">${t("ratingLabel")} ${(tm.rating||0).toFixed(2)}</span>
+        <span class="top10-rating mono">Elo ${tm.elo||1000}</span>
+      </button>
+    `).join("") || `<div class="empty-state">${t("emptyTopTeams")}</div>`;
+  }
+
   bindMatchClicks();
 }
 
@@ -1040,12 +1055,23 @@ function renderRankings(){
   if (teamsTable) {
     teamsTable.innerHTML = `
       <div class="data-row head" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr;"><span>${t("thRank")}</span><span>${t("thTeam")}</span><span>${t("thWinrate")}</span><span>${t("thElo")}</span><span>${t("thRating")}</span><span>${t("thTrophies")}</span></div>
-      ${sortedTeams.map((tm,i) => `
-        <div class="data-row" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr;" onclick="window.location.href='team-profile.html?id=${tm.id}'">
+      ${sortedTeams.map((tm,i) => {
+        const roster = PLAYERS.filter(p => p.teamId === tm.id);
+        return `
+        <div class="data-row" data-team-row="${tm.id}" style="grid-template-columns:46px 2fr 1fr 1fr 1fr 1fr; cursor:pointer;">
           <span class="d-rank">${i+1}</span><span class="d-team">${tagBlock(tm, 30)}${tm.name}</span>
           <span>${tm.winrate||0}%</span><span class="mono">${tm.elo||1000}</span><span class="mono">${(tm.rating||0).toFixed(2)}</span><span>${Array.isArray(tm.trophies) ? tm.trophies.length : (tm.trophies||0)}</span>
         </div>
-      `).join("")}
+        <div class="team-row-expand" id="teamExpand-${tm.id}">
+          <div class="team-row-expand-inner">
+            <h4>${t("compositionTitle")}</h4>
+            <ul class="lineup">
+              ${roster.length ? roster.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
+            </ul>
+            <button class="btn primary sm" data-team-profile-btn="${tm.id}">${t("btnTeamProfile")}</button>
+          </div>
+        </div>
+      `;}).join("")}
     `;
   }
 
@@ -1061,6 +1087,18 @@ function renderRankings(){
         </div>
       `).join("")}
     `;
+  }
+}
+
+function toggleTeamRoster(teamId){
+  const expand = document.getElementById(`teamExpand-${teamId}`);
+  if (!expand) return;
+  const isOpen = expand.classList.contains("open");
+  document.querySelectorAll(".team-row-expand.open").forEach(el => el.classList.remove("open"));
+  document.querySelectorAll('.data-row[data-team-row].expanded').forEach(el => el.classList.remove("expanded"));
+  if (!isOpen) {
+    expand.classList.add("open");
+    document.querySelector(`.data-row[data-team-row="${teamId}"]`)?.classList.add("expanded");
   }
 }
 
@@ -3532,6 +3570,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Делегирование кликов по динамически создаваемым кнопкам (строки таблиц, сетка)
   document.addEventListener("click", (e) => {
+    const teamProfileBtn = e.target.closest("[data-team-profile-btn]");
+    if (teamProfileBtn) { e.stopPropagation(); return void (window.location.href = `team-profile.html?id=${teamProfileBtn.dataset.teamProfileBtn}`); }
+    const teamRow = e.target.closest("[data-team-row]");
+    if (teamRow) return void toggleTeamRoster(teamRow.dataset.teamRow);
     const editTeam = e.target.closest("[data-edit-team]"); if (editTeam) return openEditTeam(editTeam.dataset.editTeam);
     const delTeam = e.target.closest("[data-del-team]"); if (delTeam) return void deleteTeam(delTeam.dataset.delTeam);
     const editPlayer = e.target.closest("[data-edit-player]"); if (editPlayer) return openEditPlayer(editPlayer.dataset.editPlayer);

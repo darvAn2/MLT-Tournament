@@ -371,6 +371,13 @@ main{ max-width:1280px; margin:0 auto; padding:0 24px 80px; }
 .stat-card .lbl{ font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
 .two-col{ display:grid; grid-template-columns:1.4fr 1fr; gap:20px; margin-top:10px; }
 .panel-box{ background:var(--panel); border:1px solid var(--line); padding:20px; }
+
+.contact-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px; }
+.contact-card{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px; text-decoration:none; color:var(--ink); transition:border-color .15s ease, background .15s ease, transform .15s ease; }
+.contact-card:hover{ border-color:var(--accent); background:var(--panel-2); transform:translateY(-2px); }
+.contact-card-icon{ font-size:26px; line-height:1; }
+.contact-card-name{ font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; }
+.contact-card-handle{ font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--cyan); word-break:break-all; }
 .panel-box h3{ font-size:15px; text-transform:none; letter-spacing:0; margin-bottom:14px; }
 .weapon-tag{ display:inline-flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--line-strong); padding:8px 14px; font-family:'JetBrains Mono', monospace; font-size:13px; }
 .match-history-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:12px; color:var(--ink-dim); }
@@ -567,6 +574,14 @@ main.reveal{ opacity:1; transform:translateY(0); filter:blur(0); transition:opac
 .top5-card:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -10px var(--accent-glow); }
 .data-row:not(.head){ transition:background .15s ease, box-shadow .15s ease; }
 .data-row:not(.head):hover{ box-shadow:inset 3px 0 0 var(--accent); }
+.data-row[data-team-row].expanded{ background:var(--panel-2); box-shadow:inset 3px 0 0 var(--accent); }
+.team-row-expand{ display:grid; grid-template-rows:0fr; overflow:hidden; background:var(--panel-2); border-bottom:1px solid var(--line); transition:grid-template-rows .22s ease; }
+.team-row-expand.open{ grid-template-rows:1fr; }
+.team-row-expand-inner{ min-height:0; overflow:hidden; padding:0 20px; }
+.team-row-expand.open .team-row-expand-inner{ padding:18px 20px 22px; }
+.team-row-expand-inner h4{ font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; margin:0 0 4px; }
+.team-row-expand-inner .lineup{ max-width:320px; }
+.team-row-expand-inner .btn{ margin-top:14px; }
 .news-card, .team-member, .bracket-team[data-bracket-team-link]{ transition:transform .18s ease, box-shadow .18s ease, background .15s ease; }
 
 /* Живой статус матча — мягкая пульсация */

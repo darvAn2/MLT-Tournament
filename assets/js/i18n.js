@@ -20,6 +20,7 @@ export const I18N = {
     sidePriority: "Приоритет №1",
     eyebrowUpcoming: "Ближайшие матчи", titleMatches: "Матчи", linkMoreMatches: "Все матчи →",
     eyebrowMedia: "Медиа", titleNews: "Последние новости", linkMoreNews: "Все новости →",
+    eyebrowTopTeams: "Рейтинг", titleTopTeams: "Топ-3 команды", linkMoreRankings: "Весь рейтинг →", loadingTeams: "Загрузка команд...", emptyTopTeams: "Пока нет команд в рейтинге",
     emptyMatches: "Нет предстоящих матчей",
     emptyUpcoming: "Нет предстоящих матчей", emptyHomeNews: "Нет новостей",
     loadingMatches: "Загрузка матчей...", loadingNews: "Загрузка новостей...",
@@ -105,7 +106,7 @@ export const I18N = {
     noTeamShort: "Без команды", matchesOfPlayer: "Матчи игрока", noMatches: "Нет матчей",
     weaponTitle: "Оружие", weaponNotSet: "Не указано",
     formTitle: "Форма (последние матчи)", matchLabelShort: "Матч", noFormData: "Нет данных",
-    lastMatches: "Последние матчи", compositionTitle: "Состав", mapStatsTitle: "Статистика по картам",
+    lastMatches: "Последние матчи", compositionTitle: "Состав", mapStatsTitle: "Статистика по картам", btnTeamProfile: "Профиль команды",
     winrateLabel: "Винрейт", ratingLabel: "Рейтинг", trophiesLabel: "Трофеи", playersLabel: "Игроков", noTrophiesYet: "Пока нет трофеев",
 
     // Admin (базовые статические подписи)
@@ -155,6 +156,7 @@ export const I18N = {
     sidePriority: "Priority #1",
     eyebrowUpcoming: "Upcoming matches", titleMatches: "Matches", linkMoreMatches: "All matches →",
     eyebrowMedia: "Media", titleNews: "Latest news", linkMoreNews: "All news →",
+    eyebrowTopTeams: "Ranking", titleTopTeams: "Top 3 teams", linkMoreRankings: "Full ranking →", loadingTeams: "Loading teams...", emptyTopTeams: "No teams ranked yet",
     emptyMatches: "No upcoming matches",
     emptyUpcoming: "No upcoming matches", emptyHomeNews: "No news yet",
     loadingMatches: "Loading matches...", loadingNews: "Loading news...",
@@ -230,7 +232,7 @@ export const I18N = {
     noTeamShort: "No team", matchesOfPlayer: "Player's matches", noMatches: "No matches",
     weaponTitle: "Weapon", weaponNotSet: "Not set",
     formTitle: "Form (recent matches)", matchLabelShort: "Match", noFormData: "No data",
-    lastMatches: "Recent matches", compositionTitle: "Roster", mapStatsTitle: "Map stats",
+    lastMatches: "Recent matches", compositionTitle: "Roster", mapStatsTitle: "Map stats", btnTeamProfile: "Team profile",
     winrateLabel: "Winrate", ratingLabel: "Rating", trophiesLabel: "Trophies", playersLabel: "Players", noTrophiesYet: "No trophies yet",
 
     adminAccessDenied: "Admins only.",
