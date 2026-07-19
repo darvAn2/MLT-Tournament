@@ -14,7 +14,7 @@ window.MLT_CONFIG = {
    * Пока здесь пусто — виджет капчи на сайте не показывается.
    */
   recaptcha: {
-    siteKey: "",
+    siteKey: "6LfZ81ktAAAAAG3GRTHFmrUgh-8-lBHAfvpKW6v3",
   },
 
   brand: {
