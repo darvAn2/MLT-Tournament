@@ -13,21 +13,21 @@
 
 <header class="site-header">
   <div class="header-inner">
-    <button class="brand" onclick="window.location.href='index.html'">
+    <button class="brand" onclick="window.location.href='/'">
       <img class="brand-mark" src="logo.jpg" alt="MLT Logo">
       <span class="brand-text">MLT<small>ESPORTS PLATFORM</small></span>
     </button>
     <nav class="main-nav">
-      <a href="index.html" class="nav-link active"><span data-i18n="navHome">Главная</span></a>
-      <a href="matches.html" class="nav-link"><span data-i18n="navMatches">Матчи</span></a>
-      <a href="rankings.html" class="nav-link"><span data-i18n="navRankings">Рейтинги</span></a>
-      <a href="tournaments.html" class="nav-link"><span data-i18n="navTournaments">Турниры</span></a>
-      <a href="news.html" class="nav-link"><span data-i18n="navNews">Новости</span></a>
-      <a href="contacts.html" class="nav-link"><span data-i18n="navContacts">Контакты</span></a>
+      <a href="/" class="nav-link active"><span data-i18n="navHome">Главная</span></a>
+      <a href="/matches" class="nav-link"><span data-i18n="navMatches">Матчи</span></a>
+      <a href="/rankings" class="nav-link"><span data-i18n="navRankings">Рейтинги</span></a>
+      <a href="/tournaments" class="nav-link"><span data-i18n="navTournaments">Турниры</span></a>
+      <a href="/news" class="nav-link"><span data-i18n="navNews">Новости</span></a>
+      <a href="/contacts" class="nav-link"><span data-i18n="navContacts">Контакты</span></a>
     </nav>
     <div class="header-actions">
       <button class="btn ghost sm" id="langToggle" title="Switch language / Сменить язык">EN</button>
-      <button class="icon-btn" id="adminPanelBtn" title="Админ-панель" data-i18n-title="adminPanelTitle" onclick="window.location.href='admin.html'" style="display:none;">
+      <button class="icon-btn" id="adminPanelBtn" title="Админ-панель" data-i18n-title="adminPanelTitle" onclick="window.location.href='/admin'" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v6c0 5 4 8.5 9 9 5-.5 9-4 9-9V7l-9-5Z" stroke="currentColor" stroke-width="1.5"/></svg>
       </button>
       <button class="btn ghost" id="openAuth">Войти</button>
@@ -40,16 +40,16 @@
   </div>
   <div class="mobile-menu" id="mobileMenu">
     <nav class="mobile-nav">
-      <a href="index.html" class="mobile-nav-link active"><span data-i18n="navHome">Главная</span></a>
-      <a href="matches.html" class="mobile-nav-link"><span data-i18n="navMatches">Матчи</span></a>
-      <a href="rankings.html" class="mobile-nav-link"><span data-i18n="navRankings">Рейтинги</span></a>
-      <a href="tournaments.html" class="mobile-nav-link"><span data-i18n="navTournaments">Турниры</span></a>
-      <a href="news.html" class="mobile-nav-link"><span data-i18n="navNews">Новости</span></a>
-      <a href="contacts.html" class="mobile-nav-link"><span data-i18n="navContacts">Контакты</span></a>
+      <a href="/" class="mobile-nav-link active"><span data-i18n="navHome">Главная</span></a>
+      <a href="/matches" class="mobile-nav-link"><span data-i18n="navMatches">Матчи</span></a>
+      <a href="/rankings" class="mobile-nav-link"><span data-i18n="navRankings">Рейтинги</span></a>
+      <a href="/tournaments" class="mobile-nav-link"><span data-i18n="navTournaments">Турниры</span></a>
+      <a href="/news" class="mobile-nav-link"><span data-i18n="navNews">Новости</span></a>
+      <a href="/contacts" class="mobile-nav-link"><span data-i18n="navContacts">Контакты</span></a>
     </nav>
     <div class="mobile-menu-actions">
       <button class="btn ghost sm" id="mobileLangToggle">EN</button>
-      <button class="icon-btn" id="mobileAdminPanelBtn" onclick="window.location.href='admin.html'" style="display:none;">
+      <button class="icon-btn" id="mobileAdminPanelBtn" onclick="window.location.href='/admin'" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v6c0 5 4 8.5 9 9 5-.5 9-4 9-9V7l-9-5Z" stroke="currentColor" stroke-width="1.5"/></svg>
       </button>
       <button class="btn primary" id="mobileOpenAuth">Войти</button>
@@ -62,12 +62,11 @@
     <div class="hero-grid">
       <div class="hero-copy">
         <span class="eyebrow" data-i18n="heroEyebrow">MLT · ESPORTS LEAGUE</span>
-        <h1><span data-i18n="heroTitleLine1">Турниры, статистика</span><br><span data-i18n="heroTitleLine2">и матчи</span></h1>
-        <p class="tagline" data-i18n="heroTagline">в одном месте</p>
+        <h1><span data-i18n="heroTitleLine1">Турниры, статистика</span><br><span data-i18n="heroTitleLine2">и матчи</span><br><span class="hero-tagline-inline" data-i18n="heroTagline">в одном месте</span></h1>
         <p data-i18n="heroDesc">Платформа лиги MLT: расписание матчей, автоматическая статистика игроков и команд, турнирные сетки и рейтинги. Всё обновляется само — админ вносит только результат.</p>
         <div class="hero-actions">
-          <button class="btn primary" onclick="window.location.href='matches.html'" data-i18n="heroBtnMatches">Смотреть матчи</button>
-          <button class="btn ghost" onclick="window.location.href='matches.html'" data-i18n="heroBtnNext">Ближайший матч</button>
+          <button class="btn primary" onclick="window.location.href='/matches'" data-i18n="heroBtnMatches">Смотреть матчи</button>
+          <button class="btn ghost" onclick="window.location.href='/matches'" data-i18n="heroBtnNext">Ближайший матч</button>
         </div>
       </div>
       <aside class="hero-side">
@@ -85,7 +84,7 @@
         <span class="eyebrow" data-i18n="eyebrowUpcoming">Ближайшие матчи</span>
         <h2 data-i18n="titleMatches">Матчи</h2>
       </div>
-      <button class="link-more" onclick="window.location.href='matches.html'" data-i18n="linkMoreMatches">Все матчи →</button>
+      <button class="link-more" onclick="window.location.href='/matches'" data-i18n="linkMoreMatches">Все матчи →</button>
     </div>
     <div class="match-grid" id="homeMatchGrid">
       <div class="empty-state" data-i18n="loadingMatches">Загрузка матчей...</div>
@@ -98,7 +97,7 @@
         <span class="eyebrow" data-i18n="eyebrowTopTeams">Рейтинг</span>
         <h2 data-i18n="titleTopTeams">Топ-3 команды</h2>
       </div>
-      <button class="link-more" onclick="window.location.href='rankings.html'" data-i18n="linkMoreRankings">Весь рейтинг →</button>
+      <button class="link-more" onclick="window.location.href='/rankings'" data-i18n="linkMoreRankings">Весь рейтинг →</button>
     </div>
     <div class="top10-grid" id="homeTopTeams">
       <div class="empty-state" data-i18n="loadingTeams">Загрузка команд...</div>
@@ -111,7 +110,7 @@
         <span class="eyebrow" data-i18n="eyebrowMedia">Медиа</span>
         <h2 data-i18n="titleNews">Последние новости</h2>
       </div>
-      <button class="link-more" onclick="window.location.href='news.html'" data-i18n="linkMoreNews">Все новости →</button>
+      <button class="link-more" onclick="window.location.href='/news'" data-i18n="linkMoreNews">Все новости →</button>
     </div>
     <div class="news-grid" id="homeNewsGrid">
       <div class="empty-state" data-i18n="loadingNews">Загрузка новостей...</div>
@@ -126,12 +125,12 @@
       <span class="brand-text" style="font-size:15px;">MLT</span>
     </div>
     <nav class="footer-links">
-      <button onclick="window.location.href='index.html'"><span data-i18n="navHome">Главная</span></button>
-      <button onclick="window.location.href='matches.html'"><span data-i18n="navMatches">Матчи</span></button>
-      <button onclick="window.location.href='rankings.html'"><span data-i18n="navRankings">Рейтинги</span></button>
-      <button onclick="window.location.href='tournaments.html'"><span data-i18n="navTournaments">Турниры</span></button>
-      <button onclick="window.location.href='news.html'"><span data-i18n="navNews">Новости</span></button>
-      <button onclick="window.location.href='contacts.html'"><span data-i18n="navContacts">Контакты</span></button>
+      <button onclick="window.location.href='/'"><span data-i18n="navHome">Главная</span></button>
+      <button onclick="window.location.href='/matches'"><span data-i18n="navMatches">Матчи</span></button>
+      <button onclick="window.location.href='/rankings'"><span data-i18n="navRankings">Рейтинги</span></button>
+      <button onclick="window.location.href='/tournaments'"><span data-i18n="navTournaments">Турниры</span></button>
+      <button onclick="window.location.href='/news'"><span data-i18n="navNews">Новости</span></button>
+      <button onclick="window.location.href='/contacts'"><span data-i18n="navContacts">Контакты</span></button>
     </nav>
     <div class="footer-social">
       <a href="#" data-social="telegram" target="_blank" rel="noopener" title="Telegram">TG</a>

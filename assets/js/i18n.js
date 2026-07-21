@@ -21,13 +21,16 @@ export const I18N = {
     eyebrowUpcoming: "Ближайшие матчи", titleMatches: "Матчи", linkMoreMatches: "Все матчи →",
     eyebrowMedia: "Медиа", titleNews: "Последние новости", linkMoreNews: "Все новости →",
     eyebrowTopTeams: "Рейтинг", titleTopTeams: "Топ-3 команды", linkMoreRankings: "Весь рейтинг →", loadingTeams: "Загрузка команд...", emptyTopTeams: "Пока нет команд в рейтинге",
-    emptyMatches: "Нет предстоящих матчей",
-    emptyUpcoming: "Нет предстоящих матчей", emptyHomeNews: "Нет новостей",
+    emptyMatches: "Матчей не найдено",
+    emptyUpcoming: "Матчей не найдено", emptyHomeNews: "Новостей не найдено",
     loadingMatches: "Загрузка матчей...", loadingNews: "Загрузка новостей...",
+    emptySub: "Попробуйте изменить параметры фильтрации",
+    emptyNewsSub: "Загляните позже — здесь появятся свежие материалы",
+    emptyTournamentsSub: "Скоро здесь появятся новые турниры",
 
     // Матчи
     pageMatchesTitle: "Матчи", tabUpcoming: "Ожидаются", tabLive: "В эфире", tabResults: "Результаты",
-    emptyLive: "Сейчас нет матчей в эфире", emptyResults: "Пока нет результатов",
+    emptyLive: "Матчей не найдено", emptyResults: "Матчей не найдено",
 
     // Рейтинги
     pageRankingsTitle: "Рейтинги", tabTeams: "Команды", tabPlayers: "Игроки",
@@ -38,13 +41,13 @@ export const I18N = {
 
     // Турниры
     pageTournamentsTitle: "Турниры", tabTourUpcoming: "Идут / скоро", tabTourDone: "Завершены",
-    loadingTournaments: "Загрузка турниров...", emptyTournaments: "Пока нет турниров",
-    emptyTournamentsDone: "Пока нет завершённых турниров",
+    loadingTournaments: "Загрузка турниров...", emptyTournaments: "Турниры не найдены",
+    emptyTournamentsDone: "Турниры не найдены",
     statusLive: "В эфире", statusUpcoming: "Скоро", statusDone: "Завершён",
     btnRegister: "Регистрация", prizeLabel: "Приз", teamsCountSuffix: "команд",
 
     // Новости
-    pageNewsTitle: "Новости", emptyNewsFull: "Пока нет новостей", filterAll: "Все",
+    pageNewsTitle: "Новости", emptyNewsFull: "Новостей не найдено", filterAll: "Все",
 
     // Контакты
     pageContactsTitle: "Контакты",
@@ -70,8 +73,14 @@ export const I18N = {
     faceitBlockTitle: "Faceit", labelFaceitElo: "Elo", labelFaceitLevel: "Уровень",
     faceitNoData: "Данные ещё не подтягивались.", faceitLastUpdated: "Обновлено",
     btnUpdateFaceit: "Обновить Elo с Faceit",
-    faceitUpdatePending: "Запрос принят — обновится в течение ~30 минут.",
+    faceitUpdatePending: "Запрашиваю данные с Faceit...",
+    faceitUpdateDone: "Elo обновлён.",
     faceitNeedNickname: "Сначала укажите ник на Faceit и сохраните контакты.",
+    faceitKeyMissing: "Ключ Faceit API не настроен на сайте (config.js) — обратитесь к администратору.",
+    faceitNetworkError: "Не удалось связаться с Faceit из браузера (возможно, ограничение CORS). Попробуйте ещё раз позже или обратитесь к администратору.",
+    faceitNotFound: "Игрок с таким ником не найден на Faceit.",
+    faceitRateLimited: "Faceit временно ограничил количество запросов. Попробуйте через минуту.",
+    faceitNoGameData: "У игрока не найдено данных по CS2/CS:GO на Faceit.",
     btnLogout: "Выйти из аккаунта",
 
     // Create/Edit team modal
@@ -126,7 +135,7 @@ export const I18N = {
     adminAllTeams: "Все команды", teamStatusPending: "На модерации", teamStatusApproved: "Одобрена",
     teamStatusRejected: "Отклонена",
 
-    // Личный кабинет (account.html)
+    // Личный кабинет (/account)
     accountTitle: "Личный кабинет", accountLoginRequired: "Войдите в аккаунт, чтобы открыть личный кабинет.",
     accountBtnLogin: "Войти", accountMemberSince: "На платформе с",
     accountTabInfo: "Инфо", accountTabTeam: "Моя команда", accountTabFaceit: "Faceit и контакты",
@@ -137,6 +146,12 @@ export const I18N = {
     accountTeamStatusRejectedNote: "Заявку на создание команды отклонили. Проверьте состав/название и отправьте заново — при сохранении изменений команда снова уйдёт на модерацию.",
     accountNoTeamDesc: "Создайте команду, чтобы участвовать в турнирах MLT.",
     accountLogoutFull: "Выйти из аккаунта",
+    accountPasswordTitle: "Смена пароля", labelCurrentPassword: "Текущий пароль",
+    labelNewPassword: "Новый пароль", labelConfirmPassword: "Повторите новый пароль",
+    btnSavePassword: "Сменить пароль",
+    passwordChanged: "Пароль изменён.", passwordMismatch: "Пароли не совпадают.",
+    passwordTooShort: "Пароль должен быть не короче 6 символов.",
+    passwordWrongCurrent: "Неверный текущий пароль.",
     createTeamModerationNote: "После отправки команда будет проверена администратором и появится на сайте после одобрения.",
     teamPendingModerationTitle: "Команда на модерации", teamPendingModerationDesc: "Эта команда ещё не прошла проверку администратора и пока не видна в общем рейтинге.",
     teamRejectedTitle: "Заявка отклонена", teamRejectedDesc: "Администратор отклонил заявку на создание этой команды.",
@@ -157,12 +172,15 @@ export const I18N = {
     eyebrowUpcoming: "Upcoming matches", titleMatches: "Matches", linkMoreMatches: "All matches →",
     eyebrowMedia: "Media", titleNews: "Latest news", linkMoreNews: "All news →",
     eyebrowTopTeams: "Ranking", titleTopTeams: "Top 3 teams", linkMoreRankings: "Full ranking →", loadingTeams: "Loading teams...", emptyTopTeams: "No teams ranked yet",
-    emptyMatches: "No upcoming matches",
-    emptyUpcoming: "No upcoming matches", emptyHomeNews: "No news yet",
+    emptyMatches: "No matches found",
+    emptyUpcoming: "No matches found", emptyHomeNews: "No news found",
     loadingMatches: "Loading matches...", loadingNews: "Loading news...",
+    emptySub: "Try adjusting the filter settings",
+    emptyNewsSub: "Check back later — fresh stories will show up here",
+    emptyTournamentsSub: "New tournaments will appear here soon",
 
     pageMatchesTitle: "Matches", tabUpcoming: "Upcoming", tabLive: "Live", tabResults: "Results",
-    emptyLive: "No matches live right now", emptyResults: "No results yet",
+    emptyLive: "No matches found", emptyResults: "No matches found",
 
     pageRankingsTitle: "Rankings", tabTeams: "Teams", tabPlayers: "Players",
     thRank: "#", thTeam: "Team", thWinrate: "Winrate", thRating: "Rating", thTrophies: "Trophies", thElo: "ELO", thForm: "Form", thMltPoints: "MLT points",
@@ -171,12 +189,12 @@ export const I18N = {
     loadingTeamsTable: "Loading team rankings...", loadingPlayersTable: "Loading player rankings...",
 
     pageTournamentsTitle: "Tournaments", tabTourUpcoming: "Ongoing / upcoming", tabTourDone: "Finished",
-    loadingTournaments: "Loading tournaments...", emptyTournaments: "No tournaments yet",
-    emptyTournamentsDone: "No finished tournaments yet",
+    loadingTournaments: "Loading tournaments...", emptyTournaments: "No tournaments found",
+    emptyTournamentsDone: "No tournaments found",
     statusLive: "Live", statusUpcoming: "Soon", statusDone: "Finished",
     btnRegister: "Register", prizeLabel: "Prize", teamsCountSuffix: "teams",
 
-    pageNewsTitle: "News", emptyNewsFull: "No news yet", filterAll: "All",
+    pageNewsTitle: "News", emptyNewsFull: "No news found", filterAll: "All",
 
     pageContactsTitle: "Contacts",
     contactsIntro: "For questions about tournaments, team registration, partnerships or technical support — reach out however is convenient, or fill in the form below.",
@@ -199,8 +217,14 @@ export const I18N = {
     faceitBlockTitle: "Faceit", labelFaceitElo: "Elo", labelFaceitLevel: "Level",
     faceitNoData: "Not fetched yet.", faceitLastUpdated: "Updated",
     btnUpdateFaceit: "Update Elo from Faceit",
-    faceitUpdatePending: "Request received — will update within ~30 minutes.",
+    faceitUpdatePending: "Fetching data from Faceit...",
+    faceitUpdateDone: "Elo updated.",
     faceitNeedNickname: "Enter your Faceit nickname and save contacts first.",
+    faceitKeyMissing: "Faceit API key isn't configured on the site (config.js) — contact the site admin.",
+    faceitNetworkError: "Couldn't reach Faceit from the browser (possibly a CORS restriction). Try again later or contact the site admin.",
+    faceitNotFound: "No player with this nickname found on Faceit.",
+    faceitRateLimited: "Faceit temporarily rate-limited requests. Try again in a minute.",
+    faceitNoGameData: "No CS2/CS:GO data found for this player on Faceit.",
     btnLogout: "Log out",
 
     createTeamTitle: "Create team", editTeamTitle: "Edit roster",
@@ -251,7 +275,7 @@ export const I18N = {
     adminAllTeams: "All teams", teamStatusPending: "Pending review", teamStatusApproved: "Approved",
     teamStatusRejected: "Rejected",
 
-    // Account cabinet (account.html)
+    // Account cabinet (/account)
     accountTitle: "Account", accountLoginRequired: "Sign in to open your account cabinet.",
     accountBtnLogin: "Log in", accountMemberSince: "Member since",
     accountTabInfo: "Info", accountTabTeam: "My team", accountTabFaceit: "Faceit & contacts",
@@ -262,6 +286,12 @@ export const I18N = {
     accountTeamStatusRejectedNote: "Your team application was rejected. Review the name/roster and save changes — saving will resend it for moderation.",
     accountNoTeamDesc: "Create a team to take part in MLT tournaments.",
     accountLogoutFull: "Log out",
+    accountPasswordTitle: "Change password", labelCurrentPassword: "Current password",
+    labelNewPassword: "New password", labelConfirmPassword: "Confirm new password",
+    btnSavePassword: "Change password",
+    passwordChanged: "Password changed.", passwordMismatch: "Passwords don't match.",
+    passwordTooShort: "Password must be at least 6 characters.",
+    passwordWrongCurrent: "Current password is incorrect.",
     createTeamModerationNote: "After submitting, an admin will review your team — it will go live once approved.",
     teamPendingModerationTitle: "Team pending moderation", teamPendingModerationDesc: "This team hasn't been reviewed by an admin yet and isn't visible in public rankings.",
     teamRejectedTitle: "Application rejected", teamRejectedDesc: "An admin rejected the application to create this team.",

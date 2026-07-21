@@ -1,6 +1,9 @@
 /* ==================================================================
    MLT — Multi-page JavaScript
-   Firebase Auth + Firestore, compatible with Firebase Spark plan
+   Firebase Auth + Firestore, compatible with Firebase Spark plan.
+   Faceit Elo обновляется прямым запросом из браузера (см. ниже) —
+   без Cloud Functions и без GitHub Actions, чтобы весь проект
+   оставался на бесплатном плане Spark.
 ================================================================== */
 
 // Firebase app/auth/db initialization is done in firebase-config.js
@@ -10,7 +13,10 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   collection,
@@ -240,7 +246,7 @@ function topMatchCardHTML(m){
   const combinedRating = (teamA.rating || 0) + (teamB.rating || 0);
 
   return `
-    <div class="top-match-card" onclick="window.location.href='match-details.html?id=${m.id}'">
+    <div class="top-match-card" onclick="window.location.href='/match-details?id=${m.id}'">
       <div class="top-match-teams">
         <span class="top-match-team">${teamA.name}</span>
         <span class="top-match-vs">vs</span>
@@ -308,7 +314,7 @@ const wait = ms => new Promise(res => setTimeout(res, ms));
 // сайта так и оставалась с кнопкой «Войти» — как будто вход не удался,
 // хотя на самом деле человек уже был залогинен. Теперь при такой ошибке
 // делаем несколько попыток подряд, прежде чем сдаться.
-async function getDocWithRetry(ref, attempts = 4, delayMs = 700){
+async function getDocWithRetry(ref, attempts = 6, delayMs = 1000){
   for (let i = 0; i < attempts; i++) {
     try {
       return await getDoc(ref);
@@ -460,7 +466,7 @@ function openProfileModal(){
     teamBox.innerHTML = `
       <div class="panel-box">
         <h3>${t("myTeamTitle")}</h3>
-        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='team-profile.html?id=${myTeam.id}'">
+        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='/team-profile?id=${myTeam.id}'">
           <span class="d-team">${tagBlock(myTeam, 28)}${myTeam.name}</span>
           <span>${t("btnOpenTeam")}</span>
         </div>
@@ -540,13 +546,13 @@ async function submitProfileNickname(e){
 }
 
 /* --------------------------------------------------------------
-   КОНТАКТЫ ПРОФИЛЯ (Telegram/Faceit) + запрос обновления Elo
-   Ключ Faceit Data API НИКОГДА не хранится в этом файле — обновление
-   Elo делает отдельный процесс на GitHub Actions по расписанию (см.
-   .github/workflows/faceit-elo-sync.yml и FACEIT_SETUP.md). Клиент
-   только сохраняет faceitNickname и ставит флаг faceitUpdateRequested;
-   воркфлоу подхватывает флаг в своём следующем прогоне и пишет
-   faceitElo/faceitLevel/faceitUrl обратно в Firestore.
+   КОНТАКТЫ ПРОФИЛЯ (Telegram/Faceit) + обновление Elo
+   Работает полностью на клиенте — без сервера, без Cloud Functions,
+   без GitHub Actions, чтобы проект оставался на бесплатном плане
+   Firebase Spark. Ключ Faceit Data API берётся из config.js
+   (window.MLT_CONFIG.faceit.apiKey) и виден в открытом коде сайта —
+   см. комментарий в config.js о том, почему это приемлемо для этого
+   сценария (только чтение публичной статистики игроков).
 -------------------------------------------------------------- */
 async function submitProfileContacts(e){
   e.preventDefault();
@@ -566,8 +572,50 @@ async function submitProfileContacts(e){
   }
 }
 
+// Общая логика запроса к Faceit Data API v4 и записи результата в
+// Firestore (users/{uid}) — используется и на /account, и в модалке
+// профиля из шапки сайта.
+async function fetchAndSaveFaceitElo(nickname){
+  const apiKey = (window.MLT_CONFIG && window.MLT_CONFIG.faceit && window.MLT_CONFIG.faceit.apiKey) || "";
+  if (!apiKey) {
+    throw new Error(t("faceitKeyMissing"));
+  }
+  let res;
+  try {
+    res = await fetch(`https://open.faceit.com/data/v4/players?nickname=${encodeURIComponent(nickname)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+  } catch (networkErr) {
+    // Типичная причина здесь — CORS: Faceit может не разрешать прямые
+    // запросы из браузера. Если это происходит стабильно у всех
+    // пользователей — см. FACEIT_SETUP.md, раздел «Альтернатива»
+    // (вариант с GitHub Actions, который делает тот же запрос с сервера,
+    // а не из браузера, и поэтому CORS не подвержен).
+    throw new Error(t("faceitNetworkError"));
+  }
+  if (res.status === 404) throw new Error(t("faceitNotFound"));
+  if (res.status === 429) throw new Error(t("faceitRateLimited"));
+  if (!res.ok) throw new Error(`Faceit API: ${res.status}`);
+
+  const data = await res.json();
+  const game = data.games?.cs2 || data.games?.csgo;
+  if (!game) throw new Error(t("faceitNoGameData"));
+
+  const patch = {
+    faceitNickname: nickname,
+    faceitUrl: data.faceit_url ? data.faceit_url.replace("{lang}", "en") : null,
+    faceitElo: game.faceit_elo ?? null,
+    faceitLevel: game.skill_level ?? null,
+    faceitUpdatedAt: serverTimestamp(),
+    faceitUpdateError: null
+  };
+  await updateDoc(doc(db, "users", currentUser.uid), patch);
+  Object.assign(currentUserDoc, patch);
+}
+
 async function requestFaceitUpdate(){
   const note = document.getElementById("pmFaceitNote");
+  const btn = document.getElementById("pmUpdateFaceitBtn");
   note.textContent = ""; note.style.color = "";
   const faceitNickname = (document.getElementById("pmFaceitNickname").value || "").trim();
   if (!faceitNickname) {
@@ -575,23 +623,23 @@ async function requestFaceitUpdate(){
     note.textContent = t("faceitNeedNickname");
     return;
   }
+  if (btn) btn.disabled = true;
+  note.textContent = t("faceitUpdatePending");
   try {
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      faceitNickname,
-      faceitUpdateRequested: true,
-      faceitUpdateRequestedAt: serverTimestamp()
-    });
-    currentUserDoc.faceitNickname = faceitNickname;
+    await fetchAndSaveFaceitElo(faceitNickname);
     note.style.color = "var(--win)";
-    note.textContent = t("faceitUpdatePending");
+    note.textContent = t("faceitUpdateDone");
+    renderProfileModal();
   } catch (err) {
     note.style.color = "var(--loss)";
-    note.textContent = (LANG === "en" ? "Error: " : "Ошибка: ") + (err.message || err);
+    note.textContent = err.message || String(err);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
 /* --------------------------------------------------------------
-   ЛИЧНЫЙ КАБИНЕТ (account.html) — полноценная страница вместо
+   ЛИЧНЫЙ КАБИНЕТ (/account) — полноценная страница вместо
    поверхностной модалки «Профиль». Вкладки: Инфо / Моя команда /
    Faceit и контакты. Фото профиля — большая портретная карточка
    (как у референса), а не маленький квадрат с буквой.
@@ -660,7 +708,7 @@ function renderAccountPage(){
         : st === "rejected" ? `<p class="form-note" style="margin-top:10px; color:var(--loss);">${t("accountTeamStatusRejectedNote")}</p>` : "";
       teamBox.innerHTML = `
         <div class="panel-box">
-          <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='team-profile.html?id=${myTeam.id}'">
+          <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='/team-profile?id=${myTeam.id}'">
             <span class="d-team">${tagBlock(myTeam, 32)}${myTeam.name} ${statusBadge}</span>
             <span>${t("btnOpenTeam")}</span>
           </div>
@@ -755,8 +803,48 @@ async function submitAccountContacts(e){
   }
 }
 
+async function submitAccountPassword(e){
+  e.preventDefault();
+  const currentPassword = document.getElementById("acCurrentPassword").value;
+  const newPassword = document.getElementById("acNewPassword").value;
+  const confirmPassword = document.getElementById("acConfirmPassword").value;
+  const note = document.getElementById("acPasswordNote");
+  const form = document.getElementById("acPasswordForm");
+  note.textContent = ""; note.style.color = "";
+
+  if (newPassword.length < 6) {
+    note.style.color = "var(--loss)";
+    note.textContent = t("passwordTooShort");
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    note.style.color = "var(--loss)";
+    note.textContent = t("passwordMismatch");
+    return;
+  }
+
+  try {
+    // Firebase требует свежей повторной аутентификации перед сменой
+    // пароля — иначе updatePassword() падает с ошибкой requires-recent-login.
+    const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+    await reauthenticateWithCredential(currentUser, credential);
+    await updatePassword(currentUser, newPassword);
+    form.reset();
+    note.style.color = "var(--win)";
+    note.textContent = t("passwordChanged");
+  } catch (err) {
+    note.style.color = "var(--loss)";
+    if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+      note.textContent = t("passwordWrongCurrent");
+    } else {
+      note.textContent = (LANG === "en" ? "Error: " : "Ошибка: ") + (err.message || err);
+    }
+  }
+}
+
 async function requestAccountFaceitUpdate(){
   const note = document.getElementById("acFaceitNote");
+  const btn = document.getElementById("acUpdateFaceitBtn");
   note.textContent = ""; note.style.color = "";
   const faceitNickname = (document.getElementById("acFaceitNickname").value || "").trim();
   if (!faceitNickname) {
@@ -764,18 +852,18 @@ async function requestAccountFaceitUpdate(){
     note.textContent = t("faceitNeedNickname");
     return;
   }
+  if (btn) btn.disabled = true;
+  note.textContent = t("faceitUpdatePending");
   try {
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      faceitNickname,
-      faceitUpdateRequested: true,
-      faceitUpdateRequestedAt: serverTimestamp()
-    });
-    currentUserDoc.faceitNickname = faceitNickname;
+    await fetchAndSaveFaceitElo(faceitNickname);
     note.style.color = "var(--win)";
-    note.textContent = t("faceitUpdatePending");
+    note.textContent = t("faceitUpdateDone");
+    renderAccountPage();
   } catch (err) {
     note.style.color = "var(--loss)";
-    note.textContent = (LANG === "en" ? "Error: " : "Ошибка: ") + (err.message || err);
+    note.textContent = err.message || String(err);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -826,7 +914,7 @@ async function submitCreateTeamForm(e){
       if (pendingTournamentId) {
         pendingTournamentId = null;
       }
-      window.location.href="account.html";
+      window.location.href="/account";
     }, 1600);
   } catch (err) {
     note.style.color = "var(--loss)";
@@ -997,18 +1085,18 @@ onSnapshot(collection(db, "users"), snap => {
 -------------------------------------------------------------- */
 function getCurrentPage(){
   const path = window.location.pathname;
-  if (path === '/' || path.endsWith('index.html')) return 'home';
-  if (path.endsWith('matches.html')) return 'matches';
-  if (path.endsWith('rankings.html')) return 'rankings';
-  if (path.endsWith('tournaments.html')) return 'tournaments';
-  if (path.endsWith('news.html')) return 'news';
-  if (path.endsWith('contacts.html')) return 'contacts';
-  if (path.endsWith('admin.html')) return 'admin';
-  if (path.endsWith('match-details.html')) return 'match-details';
-  if (path.endsWith('player-profile.html')) return 'player-profile';
-  if (path.endsWith('team-profile.html')) return 'team-profile';
-  if (path.endsWith('tournament-details.html')) return 'tournament-details';
-  if (path.endsWith('account.html')) return 'account';
+  if (path === '/' || path.endsWith('/')) return 'home';
+  if (path.endsWith('/matches')) return 'matches';
+  if (path.endsWith('/rankings')) return 'rankings';
+  if (path.endsWith('/tournaments')) return 'tournaments';
+  if (path.endsWith('/news')) return 'news';
+  if (path.endsWith('/contacts')) return 'contacts';
+  if (path.endsWith('/admin')) return 'admin';
+  if (path.endsWith('/match-details')) return 'match-details';
+  if (path.endsWith('/player-profile')) return 'player-profile';
+  if (path.endsWith('/team-profile')) return 'team-profile';
+  if (path.endsWith('/tournament-details')) return 'tournament-details';
+  if (path.endsWith('/account')) return 'account';
   return 'home';
 }
 
@@ -1060,6 +1148,21 @@ function renderPageContent(){
 }
 
 /* --------------------------------------------------------------
+   EMPTY-STATE HELPER (icon + title + subtitle, dashed card)
+-------------------------------------------------------------- */
+const ICON_SWORDS = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 4 19 17M6 4 4 6l1.5 1.5M6 4l1 3-3-1M19 17l1 3-3-1M19 17l2-2-1.5-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 4 5 17M18 4l2 2-1.5 1.5M18 4l-1 3 3-1M5 17l-1 3 3-1M5 17l-2-2 1.5-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ICON_NEWSPAPER = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="14" height="15" rx="1" stroke="currentColor" stroke-width="1.6"/><path d="M17 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6 9h8M6 12.5h8M6 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const ICON_TROPHY = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 14v3m-3 3h6m-6 0c0-1.5.9-2.3 3-3 2.1.7 3 1.5 3 3m-6 0h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function emptyState(icon, title, subtitle){
+  return `<div class="empty-state">
+    <div class="empty-state-icon">${icon}</div>
+    <div class="empty-state-title">${title}</div>
+    ${subtitle ? `<div class="empty-state-subtitle">${subtitle}</div>` : ""}
+  </div>`;
+}
+
+/* --------------------------------------------------------------
    RENDER FUNCTIONS
 -------------------------------------------------------------- */
 function renderHome(){
@@ -1071,35 +1174,34 @@ function renderHome(){
   const homeTopMatches = document.getElementById("homeTopMatches");
   if (homeTopMatches) {
     homeTopMatches.innerHTML = topMatches.map(m => topMatchCardHTML(m)).join("") ||
-      `<div class="empty-state">${t("emptyMatches")}</div>`;
+      emptyState(ICON_SWORDS, t("emptyMatches"), t("emptySub"));
   }
 
   const featured = liveMatches[0] || upcomingMatches[0];
   const homeMatchGrid = document.getElementById("homeMatchGrid");
   if (homeMatchGrid) {
     homeMatchGrid.innerHTML = upcomingMatches.slice(0,4).map(m => matchCardHTML(m, false)).join("") ||
-      `<div class="empty-state">${t("emptyUpcoming")}</div>`;
+      emptyState(ICON_SWORDS, t("emptyUpcoming"), t("emptySub"));
   }
 
   const homeNewsGrid = document.getElementById("homeNewsGrid");
   if (homeNewsGrid) {
     homeNewsGrid.innerHTML = NEWS.slice(0,3).map((n,i) => newsCardHTML(n, i===0)).join("") || 
-      `<div class="empty-state">${t("emptyHomeNews")}</div>`;
+      emptyState(ICON_NEWSPAPER, t("emptyHomeNews"), t("emptyNewsSub"));
   }
 
   const homeTopTeams = document.getElementById("homeTopTeams");
   if (homeTopTeams) {
     const topTeams = [...approvedTeams()].sort((a,b) => (b.rating||0) - (a.rating||0)).slice(0,3);
     const medalClass = ["gold","silver","bronze"];
-    const medalIcon = ["🥇","🥈","🥉"];
     homeTopTeams.innerHTML = topTeams.map((tm,i) => `
-      <button type="button" class="top10-card ${medalClass[i]}" onclick="window.location.href='team-profile.html?id=${tm.id}'">
-        <span class="top10-rank">${medalIcon[i]}</span>
+      <button type="button" class="top10-card ${medalClass[i]}" onclick="window.location.href='/team-profile?id=${tm.id}'">
+        <span class="top10-rank">${ICON_TROPHY}</span>
         <span class="top10-nick">${tm.name}</span>
         <span class="top10-team">${t("ratingLabel")} ${(tm.rating||0).toFixed(2)}</span>
         <span class="top10-rating mono">Elo ${tm.elo||1000}</span>
       </button>
-    `).join("") || `<div class="empty-state">${t("emptyTopTeams")}</div>`;
+    `).join("") || emptyState(ICON_TROPHY, t("emptyTopTeams"), t("emptySub"));
   }
 
   bindMatchClicks();
@@ -1113,19 +1215,19 @@ function renderMatches(){
   const upcomingGrid = document.getElementById("upcomingGrid");
   if (upcomingGrid) {
     upcomingGrid.innerHTML = upcomingMatches.map(m => matchCardHTML(m, false)).join("") || 
-      `<div class="empty-state">${t("emptyUpcoming")}</div>`;
+      emptyState(ICON_SWORDS, t("emptyUpcoming"), t("emptySub"));
   }
 
   const liveGrid = document.getElementById("liveGrid");
   if (liveGrid) {
     liveGrid.innerHTML = liveMatches.map(m => matchCardHTML(m, false)).join("") || 
-      `<div class="empty-state">${t("emptyLive")}</div>`;
+      emptyState(ICON_SWORDS, t("emptyLive"), t("emptySub"));
   }
 
   const resultsGrid = document.getElementById("resultsGrid");
   if (resultsGrid) {
     resultsGrid.innerHTML = finishedMatches.map(m => matchCardHTML(m, false)).join("") || 
-      `<div class="empty-state">${t("emptyResults")}</div>`;
+      emptyState(ICON_SWORDS, t("emptyResults"), t("emptySub"));
   }
 
   bindMatchClicks();
@@ -1136,19 +1238,19 @@ function renderRankings(){
   const teamsTable = document.getElementById("teamsTable");
   if (teamsTable) {
     teamsTable.innerHTML = `
-      <div class="data-row head" style="grid-template-columns:46px 2fr 1fr 1fr 1.6fr;"><span>${t("thRank")}</span><span>${t("thTeam")}</span><span>${t("thMltPoints")}</span><span>${t("thWinrate")}</span><span>${t("thForm")}</span></div>
+      <div class="data-row head" style="grid-template-columns:46px 2fr 1fr 1.6fr 1fr;"><span>${t("thRank")}</span><span>${t("thTeam")}</span><span>${t("thWinrate")}</span><span>${t("thForm")}</span><span>${t("thMltPoints")}</span></div>
       ${sortedTeams.map((tm,i) => {
         const roster = PLAYERS.filter(p => p.teamId === tm.id);
         return `
-        <div class="data-row" data-team-row="${tm.id}" style="grid-template-columns:46px 2fr 1fr 1fr 1.6fr; cursor:pointer;">
+        <div class="data-row" data-team-row="${tm.id}" style="grid-template-columns:46px 2fr 1fr 1.6fr 1fr; cursor:pointer;">
           <span class="d-rank">${i+1}</span><span class="d-team">${tagBlock(tm, 30)}${tm.name}</span>
-          <span class="mono">${tm.mltPoints||0}</span><span>${tm.winrate||0}%</span><span>${(tm.form&&tm.form.length)?formPills(tm.form):'<span class="d-dim">—</span>'}</span>
+          <span>${tm.winrate||0}%</span><span>${(tm.form&&tm.form.length)?formPills(tm.form):'<span class="d-dim">—</span>'}</span><span class="mono">${tm.mltPoints||0}</span>
         </div>
         <div class="team-row-expand" id="teamExpand-${tm.id}">
           <div class="team-row-expand-inner">
             <h4>${t("compositionTitle")}</h4>
             <ul class="lineup">
-              ${roster.length ? roster.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
+              ${roster.length ? roster.map(p => `<li onclick="window.location.href='/player-profile?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
             </ul>
             <button class="btn primary sm" data-team-profile-btn="${tm.id}">${t("btnTeamProfile")}</button>
           </div>
@@ -1163,7 +1265,7 @@ function renderRankings(){
     playersTable.innerHTML = `
       <div class="data-row head"><span>${t("thRank")}</span><span>${t("thPlayer")}</span><span>${t("thKD")}</span><span>${t("thADR")}</span><span>${t("thKAST")}</span><span>${t("thRating")}</span></div>
       ${sortedPlayers.map((p,i) => `
-        <div class="data-row" onclick="window.location.href='player-profile.html?id=${p.id}'">
+        <div class="data-row" onclick="window.location.href='/player-profile?id=${p.id}'">
           <span class="d-rank">${i+1}</span><span class="d-team">${p.nick} <span class="d-dim">${teamTag(teamById(p.teamId))}</span></span>
           <span class="mono">${(p.kd||0).toFixed(2)}</span><span class="mono">${(p.adr||0).toFixed(1)}</span><span class="mono">${p.kast||0}%</span><span class="mono">${(p.rating||0).toFixed(2)}</span>
         </div>
@@ -1194,7 +1296,7 @@ function renderTournaments(){
         <div class="tournament-info"><h3>${tr.name}</h3><span class="tournament-meta">${tr.period||""} · ${(tr.registeredTeamIds||[]).length} ${t("teamsCountSuffix")} · ${t("prizeLabel")}: ${tr.prizePool||"—"}</span></div>
         <div class="tournament-right">${tr.regOpen ? `<button class="btn primary sm" data-register-tournament="${tr.id}">${t("btnRegister")}</button>` : ""}<span class="status-badge ${tr.status}">${statusLabel[tr.status]||tr.status}</span></div>
       </div>
-    `).join("") || `<div class="empty-state">${t("emptyTournaments")}</div>`;
+    `).join("") || emptyState(ICON_TROPHY, t("emptyTournaments"), t("emptyTournamentsSub"));
   }
 
   const tournamentDoneGrid = document.getElementById("tournamentDoneGrid");
@@ -1204,7 +1306,7 @@ function renderTournaments(){
         <div class="tournament-info"><h3>${tr.name}</h3><span class="tournament-meta">${tr.period||""} · ${(tr.registeredTeamIds||[]).length} ${t("teamsCountSuffix")} · ${t("prizeLabel")}: ${tr.prizePool||"—"}</span></div>
         <div class="tournament-right"><span class="status-badge ${tr.status}">${statusLabel[tr.status]||tr.status}</span></div>
       </div>
-    `).join("") || `<div class="empty-state">${t("emptyTournamentsDone")}</div>`;
+    `).join("") || emptyState(ICON_TROPHY, t("emptyTournamentsDone"), t("emptyTournamentsSub"));
   }
 
   bindTournamentCardClicks();
@@ -1216,7 +1318,7 @@ function bindTournamentCardClicks(){
   document.querySelectorAll("[data-tournament]").forEach(el => {
     el.onclick = (e) => {
       if (e.target.closest("[data-register-tournament]")) return;
-      window.open(`/tournament-details.html?id=${el.dataset.tournament}`, "_blank", "noopener");
+      window.open(`/tournament-details?id=${el.dataset.tournament}`, "_blank", "noopener");
     };
   });
 }
@@ -1225,7 +1327,7 @@ function renderNews(){
   const newsGridFull = document.getElementById("newsGridFull");
   if (newsGridFull) {
     newsGridFull.innerHTML = NEWS.map(n => newsCardHTML(n, true)).join("") || 
-      `<div class="empty-state">${t("emptyNewsFull")}</div>`;
+      emptyState(ICON_NEWSPAPER, t("emptyNewsFull"), t("emptyNewsSub"));
   }
 
   const newsFilters = document.getElementById("newsFilters");
@@ -1301,7 +1403,7 @@ function renderMatchDetailsPage(){
   let html = `
     <div class="md-teams-panel">
       <div class="md-teams-grid">
-        <div class="md-team" onclick="window.location.href='team-profile.html?id=${teamA.id}'">
+        <div class="md-team" onclick="window.location.href='/team-profile?id=${teamA.id}'">
           ${tagBlock(teamA, 88)}
           <span class="team-name" style="font-size:18px;">${teamA.name}</span>
           ${formPills(teamA.form)}
@@ -1311,7 +1413,7 @@ function renderMatchDetailsPage(){
           ${midValue}
           <span>${dateLabel(m.startAt, false)}</span>
         </div>
-        <div class="md-team" onclick="window.location.href='team-profile.html?id=${teamB.id}'">
+        <div class="md-team" onclick="window.location.href='/team-profile?id=${teamB.id}'">
           ${tagBlock(teamB, 88)}
           <span class="team-name" style="font-size:18px;">${teamB.name}</span>
           ${formPills(teamB.form)}
@@ -1328,12 +1430,12 @@ function renderMatchDetailsPage(){
         <div class="md-teams-grid" style="align-items:start;">
           <div>
             <div class="stat-team-label">${teamA.name} — ${t("compositionOf")}</div>
-            <ul class="lineup">${rosterA.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
+            <ul class="lineup">${rosterA.map(p => `<li onclick="window.location.href='/player-profile?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
           </div>
           <div></div>
           <div>
             <div class="stat-team-label">${teamB.name} — ${t("compositionOf")}</div>
-            <ul class="lineup">${rosterB.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
+            <ul class="lineup">${rosterB.map(p => `<li onclick="window.location.href='/player-profile?id=${p.id}'">${p.nick}</li>`).join("") || `<li style="cursor:default;">${t("noRoster")}</li>`}</ul>
           </div>
         </div>
       </div>
@@ -1408,7 +1510,7 @@ function renderPlayerProfilePage(){
       <div class="player-avatar" style="${avatarStyle}">${photoUrl ? "" : (p.nick || "?")[0]}</div>
       <div class="profile-info">
         <h1>${p.nick}</h1>
-        ${team ? `<div class="profile-sub" onclick="window.location.href='team-profile.html?id=${team.id}'">${team.name}</div>` : `<div class="profile-sub" style="cursor:default;">${t("noTeamShort")}</div>`}
+        ${team ? `<div class="profile-sub" onclick="window.location.href='/team-profile?id=${team.id}'">${team.name}</div>` : `<div class="profile-sub" style="cursor:default;">${t("noTeamShort")}</div>`}
         <div class="achievements">
           ${(p.achievements && p.achievements.length) ? p.achievements.map(a => `<span class="achv">${a}</span>`).join("") : ""}
           ${contactChips.join("")}
@@ -1433,7 +1535,7 @@ function renderPlayerProfilePage(){
               if (!match) return "";
               const opponent = teamById(match.teamA === p.teamId ? match.teamB : match.teamA);
               const result = match.status === "finished" && match.score ? (match.score[0] > match.score[1] ? "W" : "L") : "—";
-              return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='match-details.html?id=${match.id}'"><span>${opponent ? opponent.name : "—"}</span><span>${result}</span><span>${dateLabel(match.startAt, false)}</span></div>`;
+              return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='/match-details?id=${match.id}'"><span>${opponent ? opponent.name : "—"}</span><span>${result}</span><span>${dateLabel(match.startAt, false)}</span></div>`;
             }).join("") || `<div class="empty-state" style="padding:24px 0;">${t("noMatches")}</div>`
           : `<div class="empty-state" style="padding:24px 0;">${t("noMatches")}</div>`}
       </div>
@@ -1504,13 +1606,13 @@ function renderTeamProfilePage(){
         ${recentMatches.length ? recentMatches.map(m => {
           const opponent = teamById(m.teamA === team.id ? m.teamB : m.teamA);
           const isWin = m.score && ((m.teamA === team.id && m.score[0] > m.score[1]) || (m.teamB === team.id && m.score[1] > m.score[0]));
-          return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='match-details.html?id=${m.id}'"><span>${opponent ? opponent.name : "—"}</span><span style="color:${isWin ? "var(--win)" : "var(--loss)"};">${isWin ? "W" : "L"}</span><span>${dateLabel(m.startAt, false)}</span></div>`;
+          return `<div class="match-history-row" style="cursor:pointer;" onclick="window.location.href='/match-details?id=${m.id}'"><span>${opponent ? opponent.name : "—"}</span><span style="color:${isWin ? "var(--win)" : "var(--loss)"};">${isWin ? "W" : "L"}</span><span>${dateLabel(m.startAt, false)}</span></div>`;
         }).join("") : `<div class="empty-state" style="padding:24px 0;">${t("noMatches")}</div>`}
       </div>
       <div class="panel-box">
         <h3>${t("compositionTitle")}</h3>
         <ul class="lineup">
-          ${roster.length ? roster.map(p => `<li onclick="window.location.href='player-profile.html?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
+          ${roster.length ? roster.map(p => `<li onclick="window.location.href='/player-profile?id=${p.id}'">${p.nick}</li>`).join("") : `<li style="cursor:default;">${t("noRoster")}</li>`}
         </ul>
         <h3 style="margin-top:20px;">${t("trophiesLabel")}</h3>
         ${Array.isArray(team.trophies) && team.trophies.length
@@ -1535,7 +1637,7 @@ function renderTeamProfilePage(){
 }
 
 /* --------------------------------------------------------------
-   СТРАНИЦА ТУРНИРА (tournament-details.html) — открывается по клику
+   СТРАНИЦА ТУРНИРА (/tournament-details) — открывается по клику
    на карточку турнира в отдельной вкладке. Вкладки: Сетка / Участники /
    Матчи / Топ-5 игроков. Переиспользует .ac-tabs/.ac-tab-panel стили
    и биндинг переключения вкладок из личного кабинета.
@@ -1594,20 +1696,21 @@ function renderTournamentDetailsPage(){
 // сетке плей-офф). Позиции матчей считаются в пикселях: раунд 0 —
 // равномерно, каждый следующий раунд — по центру между "родителями".
 function publicStandingsTableHTML(rows, kind){
+  const cols = kind === "league" ? "40px 2fr 0.7fr 0.7fr 0.7fr 0.7fr 0.8fr 0.8fr" : "40px 2fr 1fr 1fr";
   const head = kind === "league"
-    ? `<div class="data-row head" style="grid-template-columns:40px 2fr 50px 50px 50px 50px 60px 60px;"><span>#</span><span>${t("thTeam")}</span><span>${t("stP")}</span><span>${t("stW")}</span><span>${t("stD")}</span><span>${t("stL")}</span><span>+/-</span><span>${t("stPts")}</span></div>`
-    : `<div class="data-row head" style="grid-template-columns:40px 2fr 60px 60px;"><span>#</span><span>${t("thTeam")}</span><span>${t("stW")}</span><span>${t("stL")}</span></div>`;
+    ? `<div class="data-row head" style="grid-template-columns:${cols};"><span>#</span><span>${t("thTeam")}</span><span>${t("stP")}</span><span>${t("stW")}</span><span>${t("stD")}</span><span>${t("stL")}</span><span>+/-</span><span>${t("stPts")}</span></div>`
+    : `<div class="data-row head" style="grid-template-columns:${cols};"><span>#</span><span>${t("thTeam")}</span><span>${t("stW")}</span><span>${t("stL")}</span></div>`;
   const body = rows.map((row, i) => {
     const tm = teamById(row.teamId);
     const name = tm ? tm.name : "?";
     if (kind === "league") {
-      return `<div class="data-row" onclick="window.location.href='team-profile.html?id=${row.teamId}'">
+      return `<div class="data-row" style="grid-template-columns:${cols};" onclick="window.location.href='/team-profile?id=${row.teamId}'">
         <span class="d-rank">${i + 1}</span><span class="d-team">${tm ? tagBlock(tm, 24) : ""}${name}</span>
         <span>${row.played}</span><span>${row.wins}</span><span>${row.draws}</span><span>${row.losses}</span>
         <span class="mono">${row.gf - row.ga >= 0 ? "+" : ""}${row.gf - row.ga}</span><span class="mono" style="font-weight:700;">${row.pts}</span>
       </div>`;
     }
-    return `<div class="data-row" onclick="window.location.href='team-profile.html?id=${row.teamId}'">
+    return `<div class="data-row" style="grid-template-columns:${cols};" onclick="window.location.href='/team-profile?id=${row.teamId}'">
       <span class="d-rank">${i + 1}</span><span class="d-team">${tm ? tagBlock(tm, 24) : ""}${name}</span>
       <span class="mono">${row.wins}</span><span class="mono">${row.losses}</span>
     </div>`;
@@ -1758,7 +1861,7 @@ function tournamentParticipantsHTML(teams){
   return `
     <div class="participants-grid">
       ${teams.map(tm => `
-        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='team-profile.html?id=${tm.id}'">
+        <div class="data-row" style="grid-template-columns:1fr auto; cursor:pointer;" onclick="window.location.href='/team-profile?id=${tm.id}'">
           <span class="d-team">${tagBlock(tm, 30)}${tm.name}</span>
           <span class="mono">${(tm.rating || 0).toFixed(2)} RTG</span>
         </div>
@@ -1794,7 +1897,7 @@ function tournamentTop5HTML(players){
   return `
     <div class="top10-grid">
       ${top10.map((p, i) => `
-        <button type="button" class="top10-card ${getMedalClass(i)}" onclick="window.location.href='player-profile.html?id=${p.id}'">
+        <button type="button" class="top10-card ${getMedalClass(i)}" onclick="window.location.href='/player-profile?id=${p.id}'">
           <span class="top10-rank">${getMedalIcon(i)}</span>
           <span class="top10-nick">${p.nick}</span>
           <span class="top10-team">${teamTag(teamById(p.teamId))}</span>
@@ -1806,7 +1909,7 @@ function tournamentTop5HTML(players){
     <div id="allPlayersList" style="display:none; margin-top:16px;">
       <div class="data-table">
         ${players.slice(10).map((p, i) => `
-          <div class="data-row" onclick="window.location.href='player-profile.html?id=${p.id}'">
+          <div class="data-row" onclick="window.location.href='/player-profile?id=${p.id}'">
             <span class="d-rank">#${i + 11}</span>
             <span class="d-team">${p.nick} <span class="d-dim">${teamTag(teamById(p.teamId))}</span></span>
             <span class="mono">${(p.rating || 0).toFixed(2)}</span>
@@ -2793,20 +2896,21 @@ function currentBracketType(){
 
 function standingsTableHTML(rows, kind){
   // kind: "swiss" (W/L) или "league" (P/W/D/L/+-/Pts)
+  const cols = kind === "league" ? "40px 2fr 0.7fr 0.7fr 0.7fr 0.7fr 0.8fr 0.8fr" : "40px 2fr 1fr 1fr";
   const head = kind === "league"
-    ? `<div class="data-row head" style="grid-template-columns:40px 2fr 50px 50px 50px 50px 60px 60px;"><span>#</span><span>Команда</span><span>И</span><span>В</span><span>Н</span><span>П</span><span>+/-</span><span>Очки</span></div>`
-    : `<div class="data-row head" style="grid-template-columns:40px 2fr 60px 60px;"><span>#</span><span>Команда</span><span>Победы</span><span>Пораж.</span></div>`;
+    ? `<div class="data-row head" style="grid-template-columns:${cols};"><span>#</span><span>Команда</span><span>И</span><span>В</span><span>Н</span><span>П</span><span>+/-</span><span>Очки</span></div>`
+    : `<div class="data-row head" style="grid-template-columns:${cols};"><span>#</span><span>Команда</span><span>Победы</span><span>Пораж.</span></div>`;
   const body = rows.map((row, i) => {
     const tm = teamById(row.teamId);
     const name = tm ? tm.name : "?";
     if (kind === "league") {
-      return `<div class="data-row" style="grid-template-columns:40px 2fr 50px 50px 50px 50px 60px 60px; cursor:default;">
+      return `<div class="data-row" style="grid-template-columns:${cols}; cursor:default;">
         <span>${i + 1}</span><span class="d-team">${tm ? tagBlock(tm, 24) : ""}${name}</span>
         <span>${row.played}</span><span>${row.wins}</span><span>${row.draws}</span><span>${row.losses}</span>
         <span class="mono">${row.gf - row.ga >= 0 ? "+" : ""}${row.gf - row.ga}</span><span class="mono" style="font-weight:700;">${row.pts}</span>
       </div>`;
     }
-    return `<div class="data-row" style="grid-template-columns:40px 2fr 60px 60px; cursor:default;">
+    return `<div class="data-row" style="grid-template-columns:${cols}; cursor:default;">
       <span>${i + 1}</span><span class="d-team">${tm ? tagBlock(tm, 24) : ""}${name}</span>
       <span class="mono">${row.wins}</span><span class="mono">${row.losses}</span>
     </div>`;
@@ -3360,7 +3464,7 @@ function fillTournamentSelect(sel, selected, withEmpty){
 function bindMatchClicks(){
   document.querySelectorAll("[data-match]").forEach(el => {
     el.onclick = () => {
-      window.location.href=`match-details.html?id=${el.dataset.match}`;
+      window.location.href=`/match-details?id=${el.dataset.match}`;
     };
   });
 }
@@ -3374,7 +3478,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (openAuthBtn) {
     openAuthBtn.addEventListener("click", () => {
       if (currentUser) {
-        window.location.href="account.html";
+        window.location.href="/account";
       } else {
         document.getElementById("authModal").classList.add("open");
       }
@@ -3387,16 +3491,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("editTeamForm")?.addEventListener("submit", submitEditTeamForm);
   document.getElementById("tournamentRegForm")?.addEventListener("submit", submitTournamentReg);
 
-  // Личный кабинет (account.html)
+  // Личный кабинет (/account)
   document.getElementById("acNicknameForm")?.addEventListener("submit", submitAccountNickname);
   document.getElementById("acPhotoInput")?.addEventListener("change", submitAccountPhoto);
   document.getElementById("acContactsForm")?.addEventListener("submit", submitAccountContacts);
+  document.getElementById("acPasswordForm")?.addEventListener("submit", submitAccountPassword);
   document.getElementById("acUpdateFaceitBtn")?.addEventListener("click", requestAccountFaceitUpdate);
   document.getElementById("acLogoutBtn")?.addEventListener("click", handleLogout);
   document.getElementById("acOpenAuthBtn")?.addEventListener("click", () => document.getElementById("authModal").classList.add("open"));
   // Делегирование клика на документ: вкладки .ac-tab-btn могут быть
-  // как статичными (account.html), так и добавленными позже динамически
-  // (tournament-details.html рендерится асинхронно после загрузки данных
+  // как статичными (/account), так и добавленными позже динамически
+  // (/tournament-details рендерится асинхронно после загрузки данных
   // из Firestore, уже после DOMContentLoaded) — прямой addEventListener
   // на querySelectorAll в этот момент их не находил, и клики по вкладкам
   // "Матчи"/"Участники"/"Топ" на странице турнира не работали.
@@ -3480,7 +3585,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (mobileOpenAuth) {
     mobileOpenAuth.addEventListener("click", () => {
       if (currentUser) {
-        window.location.href="account.html";
+        window.location.href="/account";
       } else {
         document.getElementById("authModal").classList.add("open");
         closeMobileMenu();
@@ -3514,7 +3619,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------------- ADMIN PANEL BINDINGS (существуют только на admin.html) ---------------- */
+  /* ---------------- ADMIN PANEL BINDINGS (существуют только на /admin) ---------------- */
 
   // Переключение вкладок админки
   document.querySelectorAll(".admin-link").forEach(btn => {
@@ -3653,7 +3758,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Делегирование кликов по динамически создаваемым кнопкам (строки таблиц, сетка)
   document.addEventListener("click", (e) => {
     const teamProfileBtn = e.target.closest("[data-team-profile-btn]");
-    if (teamProfileBtn) { e.stopPropagation(); return void (window.location.href = `team-profile.html?id=${teamProfileBtn.dataset.teamProfileBtn}`); }
+    if (teamProfileBtn) { e.stopPropagation(); return void (window.location.href = `/team-profile?id=${teamProfileBtn.dataset.teamProfileBtn}`); }
     const teamRow = e.target.closest("[data-team-row]");
     if (teamRow) return void toggleTeamRoster(teamRow.dataset.teamRow);
     const editTeam = e.target.closest("[data-edit-team]"); if (editTeam) return openEditTeam(editTeam.dataset.editTeam);
@@ -3675,7 +3780,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const promoteUser = e.target.closest("[data-promote-user]"); if (promoteUser) return void promoteUserToAdmin(promoteUser.dataset.promoteUser);
     const delUserBtn = e.target.closest("[data-delete-user]"); if (delUserBtn) return void deleteUser(delUserBtn.dataset.deleteUser);
     const regTournament = e.target.closest("[data-register-tournament]"); if (regTournament) return handleRegisterClick(regTournament.dataset.registerTournament);
-    const bracketTeamLink = e.target.closest("[data-bracket-team-link]"); if (bracketTeamLink) return void (window.location.href=`team-profile.html?id=${bracketTeamLink.dataset.bracketTeamLink}`);
+    const bracketTeamLink = e.target.closest("[data-bracket-team-link]"); if (bracketTeamLink) return void (window.location.href=`/team-profile?id=${bracketTeamLink.dataset.bracketTeamLink}`);
     const beClearMatch = e.target.closest("[data-be-clear-match]");
     if (beClearMatch && bracketWorking) {
       const ri = Number(beClearMatch.dataset.round), mi = Number(beClearMatch.dataset.match);
